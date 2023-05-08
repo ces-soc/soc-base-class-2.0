@@ -1,6 +1,5 @@
 import logging
 import json
-from abc import ABC, abstractmethod
 from typing import Dict, List, Union, Optional
 import boto3
 from botocore.exceptions import ClientError

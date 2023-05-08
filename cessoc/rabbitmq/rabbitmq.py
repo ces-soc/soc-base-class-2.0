@@ -1,12 +1,29 @@
-import json
-import time
-import ssl
-import uuid
 import logging
-from typing import Dict, List, Optional
+import ssl
+import functools
+import json
+import threading
+import os
+import signal
+import time
+import traceback
+import uuid
+from concurrent.futures.thread import ThreadPoolExecutor
+from typing import List, Dict, Callable, Union, Optional, Tuple
 import pika
 
+from pythonjsonlogger import jsonlogger
+from pika.channel import Channel
+from pika.connection import Connection
+from pika.spec import BasicProperties, Basic
+from pika.frame import Method
+
+from cessoc.rabbitmq.queue import Queue, QueueDefinitionManager, QueueArguments
+from cessoc.rabbitmq.exchange import Exchange, ExchangeType
+
 print("rabbitmq imported")
+
+# FROM ETL SECTION
 
 def publish_message_campus(
     campus: str, routing_key: str, body: Dict, reply_to: bool = False, timeout: int = 300
@@ -143,8 +160,9 @@ def publish_message(
     connection.close()
     return None
 
+# FROM EDM SECTION
 
-class EDM:
+class Rabbit:
     """EDM Base Class abstracts Pika connections/actions"""
 
     def __init__(
@@ -154,14 +172,14 @@ class EDM:
         connection_name: Optional[str] = None,
         file_logging=False,
         heartbeat=10,
-        config_manager: ConfigManager = None,
+        # config_manager: ConfigManager = None,
     ) -> None:
-        """Initialize defaults, set prefetch count if increased performance is required"""
-        if config_manager is None:
-            self.config_manager = ConfigManager(file_log=file_logging)
-        else:
-            self.config_manager = config_manager
-        self.config = self.config_manager.config
+        # """Initialize defaults, set prefetch count if increased performance is required"""
+        # if config_manager is None:
+        #     self.config_manager = ConfigManager(file_log=file_logging)
+        # else:
+        #     self.config_manager = config_manager
+        # self.config = self.config_manager.config
         self.parameters: Dict = {}
 
         # This line should come after the config manager is intialized because the config_manager configures the root logger
@@ -226,23 +244,14 @@ class EDM:
         self._event_logger.propagate = False
         # set logging to stdout
         event_ch = self.config_manager.get_logging_handler()
-        # set log format
-        if isatty() and self.config_manager._force_json_logging is False:
-            # color is supported
-            event_ch.setFormatter(
-                CustomEventColorFormatter(
-                    "[%(asctime)s] [%(levelname)-19s] [%(lineno)04d] [%(name)-25s] [%(funcName)-15s] [%(thread)d] "
-                    "[%(exchange)s] [%(routing_key)s] [%(correlation_id)s] [%(app_id)s] [%(user_id)s] %(message)s"
-                )
+        
+        # color is not supported, we no longer want to support color
+        event_ch.setFormatter(
+            jsonlogger.JsonFormatter(
+                "%(asctime)s %(levelname)s %(thread)d %(lineno)d %(name)s %(funcName)s "
+                "%(exchange)s %(routing_keys)s %(correlation_id)s %(app_id)s %(user_id)s %(message)s"
             )
-        else:
-            # color is not supported
-            event_ch.setFormatter(
-                jsonlogger.JsonFormatter(
-                    "%(asctime)s %(levelname)s %(thread)d %(lineno)d %(name)s %(funcName)s "
-                    "%(exchange)s %(routing_keys)s %(correlation_id)s %(app_id)s %(user_id)s %(message)s"
-                )
-            )
+        )
 
         # services like AWS lambda persist the logger sometimes in between runs. This removes any previous handlers/instances
         if len(self._event_logger.handlers) != 0:
@@ -251,18 +260,6 @@ class EDM:
         self._event_logger.addHandler(event_ch)
 
         self._thread_local = threading.local()
-
-    # @property
-    # def logger(self) -> Logger:
-    #     """
-    #     Returns a different logger if currently processing an event.
-    #     The logger should only be configured by the base class since it's been specialized.
-    #     Read-only
-    #     """
-    #     if self._thread_local and hasattr(self._thread_local, "logger"):
-    #         return self._thread_local.logger
-    #     else:
-    #         return self._logger
 
     def _connect(self, username: str, password: str) -> Connection:
         """Configures and starts the connection the the MQ."""
@@ -673,87 +670,6 @@ class EDM:
             self._connection = self._connect(username, password)
             self._connection.ioloop.start()
 
-    def publish_message_campus(
-        self,
-        message: Union[Dict, List],
-        routing_key: str,
-        reply_to: bool = False,
-        reply_to_callback: Optional[Callable] = None,
-        reply_to_headers: Optional[Dict] = None,
-        correlation_id: Optional[str] = None,
-        priority: Optional[int] = None,
-        mandatory: bool = True,
-    ) -> str:
-        """
-        Ease of use function to automatically specify the campus name for the exchange
-
-        :param message: JSON message to send
-        :param routing_key: Key used to route the message
-        :param reply_to: Request a reply
-        :param reply_to_callback: The callback to reply to. Must be set when `reply_to` is True
-        :param reply_to_headers: Headers added as part of the message properties that will be sent back if `reply_to` is True
-        :param correlation_id: The message correlation ID to use
-        :param priority: The priority of the message
-        :param mandatory: If the message must be routable to a queue
-
-        :returns: The UUID used for the message ID
-        """
-        return self.publish_message(
-            message,
-            routing_key,
-            exchange=self.config["campus_name"],
-            reply_to=reply_to,
-            reply_to_callback=reply_to_callback,
-            reply_to_headers=reply_to_headers,
-            correlation_id=correlation_id,
-            priority=priority,
-            mandatory=mandatory,
-        )
-
-    def publish_message(
-        self,
-        message: Union[Dict, List],
-        routing_key: str,
-        exchange: str = "",
-        reply_to: bool = False,
-        reply_to_callback: Optional[Callable] = None,
-        reply_to_headers: Optional[Dict] = None,
-        correlation_id: Optional[str] = None,
-        priority: Optional[int] = None,
-        mandatory: bool = True,
-    ) -> str:
-        """
-        Publishes a message to the MQ using a thread safe callback
-
-        :param message: JSON message to send
-        :param routing_key: Key used to route the message
-        :param exchange: The exchange to publish to
-        :param reply_to: Request a reply
-        :param reply_to_callback: The callback to reply to. Must be set when `reply_to` is True
-        :param reply_to_headers: Headers added as part of the message properties that will be sent back if `reply_to` is True
-        :param correlation_id: The message correlation ID to use
-        :param priority: The priority of the message
-        :param mandatory: If the message must be routable to a queue
-
-        :returns: The UUID used for the message ID
-        """
-        if not correlation_id:
-            correlation_id = uuid.uuid4().hex
-        cb = functools.partial(
-            self._publish_message,
-            message=message,
-            routing_key=routing_key,
-            exchange=exchange,
-            reply_to=reply_to,
-            reply_to_callback=reply_to_callback,
-            reply_to_headers=reply_to_headers,
-            correlation_id=correlation_id,
-            priority=priority,
-            mandatory=mandatory,
-        )
-        self._connection.ioloop.add_callback_threadsafe(cb)
-        return correlation_id
-
     def _publish_message(
         self,
         message: Union[Dict, List],
@@ -837,7 +753,7 @@ class EDM:
             self.logger.error("Message was unroutable")
 
     def register_on_message_callback_campus(
-        self, queue_name: str, bindings: Dict[str, Tuple[Dict, Callable]], max_priority: Optional[int] = None
+        self, queue_name: str, campus_name, bindings: Dict[str, Tuple[Dict, Callable]], max_priority: Optional[int] = None, 
     ) -> None:
         """
         Ease of use function to automatically specify the campus name for the exchange
@@ -847,9 +763,9 @@ class EDM:
         :param max_priority: Max priority of the queue. Can be 1-256. https://www.rabbitmq.com/priority.html
         """
         self.register_on_message_callback(
-            f"{queue_name}-{self.config['campus_name']}",
+            f"{queue_name}-{campus_name}",
             bindings=bindings,
-            exchange=self.config["campus_name"],
+            exchange=campus_name.lower(),
             max_priority=max_priority,
         )
 
@@ -994,76 +910,3 @@ class EDM:
             # close now, interupting any currently processing messages
             self.logger.info("Hard shutdown!")
             os._exit(0)  # pylint: disable=protected-access
-
-    def s3_get(
-        self,
-        key: str,
-        bucket: str,
-        access_key: Optional[str] = None,
-        secret_key: Optional[str] = None,
-        region_name: Optional[str] = "us-west-2",
-    ) -> str:
-        """
-        S3 GET operator for base class
-
-        :param key: the path + name of file to be accessed
-        :param bucket: the bucket containing the file
-        :param access_key: AWS access key id for bucket call
-        :param secret_key: AWS secret key matching access key
-        :param region_name: Region name of bucket (if needed)
-
-        :raises ClientError: on boto3 python sdk error
-
-        :returns: Bucket data as string
-        """
-        self.logger.debug("Accessing %s in s3 bucket %s", key, bucket)
-        if access_key and secret_key:
-            client = boto3.client(
-                "s3", aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region_name
-            )
-        else:
-            client = boto3.client("s3", region_name=region_name)
-        try:
-            response = client.get_object(Key=key, Bucket=bucket)
-            self.logger.debug(response)
-        except ClientError as ex:
-            self.logger.error("Could not get from S3: %s", ex)
-            raise ex
-        else:
-            return response["Body"].read().decode("utf-8")
-
-    def s3_put(
-        self,
-        key: str,
-        bucket: str,
-        body: str,
-        access_key: Optional[str] = None,
-        secret_key: Optional[str] = None,
-        region_name: Optional[str] = "us-west-2",
-    ) -> None:
-        """
-        S3 PUT operator for base class
-
-        :param key: the path + name of file to be accessed
-        :param bucket: the bucket containing the file
-        :param body: body of file to be written
-        :param access_key: AWS access key id for bucket call
-        :param secret_key: AWS secret key matching access key
-        :param region_name: Region name of bucket (if needed)
-
-        :raises ClientError: on boto3 python sdk error
-        """
-        self.logger.debug("Putting data to %s in s3 bucket %s", key, bucket)
-        if access_key and secret_key:
-            client = boto3.client(
-                "s3", aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region_name
-            )
-        else:
-            client = boto3.client("s3", region_name=region_name)
-        try:
-            response = client.put_object(Key=key, Bucket=bucket, Body=body)
-            self.logger.debug(response)
-        except ClientError as ex:
-            self.logger.error("Could not put to s3: %s", ex)
-            raise ex
-
