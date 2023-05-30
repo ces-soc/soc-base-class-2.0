@@ -238,26 +238,28 @@ class Rabbit:
             signal.signal(signal.SIGINT, self._shutdown_interupt_cb)
             signal.signal(signal.SIGTERM, self._shutdown_interupt_cb)
 
-        # set specialized event logger and add event specific data to the log
-        self._event_logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}.message")
-        # do not propagate logs to parents (ie. the root logger). Otherwise logs will be logged twice or more
-        self._event_logger.propagate = False
-        # set logging to stdout
-        event_ch = self.config_manager.get_logging_handler()
-        
-        # color is not supported, we no longer want to support color
-        event_ch.setFormatter(
-            jsonlogger.JsonFormatter(
-                "%(asctime)s %(levelname)s %(thread)d %(lineno)d %(name)s %(funcName)s "
-                "%(exchange)s %(routing_keys)s %(correlation_id)s %(app_id)s %(user_id)s %(message)s"
-            )
-        )
+#### LOGGER STUFF
 
-        # services like AWS lambda persist the logger sometimes in between runs. This removes any previous handlers/instances
-        if len(self._event_logger.handlers) != 0:
-            self._event_logger.handlers = []
-        # add handler to logger
-        self._event_logger.addHandler(event_ch)
+        # # set specialized event logger and add event specific data to the log
+        # self._event_logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}.message")
+        # # do not propagate logs to parents (ie. the root logger). Otherwise logs will be logged twice or more
+        # self._event_logger.propagate = False
+        # # set logging to stdout
+        # event_ch = self.config_manager.get_logging_handler()
+        
+        # # color is not supported, we no longer want to support color
+        # event_ch.setFormatter(
+        #     jsonlogger.JsonFormatter(
+        #         "%(asctime)s %(levelname)s %(thread)d %(lineno)d %(name)s %(funcName)s "
+        #         "%(exchange)s %(routing_keys)s %(correlation_id)s %(app_id)s %(user_id)s %(message)s"
+        #     )
+        # )
+
+        # # services like AWS lambda persist the logger sometimes in between runs. This removes any previous handlers/instances
+        # if len(self._event_logger.handlers) != 0:
+        #     self._event_logger.handlers = []
+        # # add handler to logger
+        # self._event_logger.addHandler(event_ch)
 
         self._thread_local = threading.local()
 
