@@ -792,7 +792,7 @@ class Rabbit:
         :param max_priority: Max priority of the queue. Can be 1-256. https://www.rabbitmq.com/priority.html
         """
         for value in bindings.values():
-            self.logger.debug("Registering on_message callback %s", value)
+            logging.debug("Registering on_message callback %s", value)
 
         if type(exchange) == str:
             exchanges = [exchange]
@@ -826,7 +826,7 @@ class Rabbit:
 
         :param callback: Function to call when a reply-to message is received
         """
-        self.logger.debug("Registering on reply_to callback: %s", callback.__qualname__)
+        logging.debug("Registering on reply_to callback: %s", callback.__qualname__)
         self._reply_to_callbacks[callback.__qualname__] = callback
 
         # routing key is the same as the queue name
@@ -875,12 +875,12 @@ class Rabbit:
 
         :param callback: Function to call after this service opens a channel to the MQ
         """
-        self.logger.debug("Registering after_channel_open callback: %s", callback)
+        logging.debug("Registering after_channel_open callback: %s", callback)
         self._after_channel_open_callbacks.append(callback)
 
     def _after_channel_open(self) -> None:
         """Called when the channel has been opened."""
-        self.logger.debug("Calling after_channel_open callbacks. %s total", len(self._after_channel_open_callbacks))
+        logging.debug("Calling after_channel_open callbacks. %s total", len(self._after_channel_open_callbacks))
         for cb in self._after_channel_open_callbacks:
             cb()
 
@@ -891,13 +891,13 @@ class Rabbit:
 
         :param callback: Function to call after this service is ready to receive messages
         """
-        self.logger.debug("Registering on_ready callback: %s", callback)
+        logging.debug("Registering on_ready callback: %s", callback)
         self._on_ready_callbacks.append(callback)
 
     def _on_ready(self) -> None:
         """Called when all queues are registered and the service is ready to receive messages"""
-        self.logger.info("EDM ready")
-        self.logger.debug("Calling on_ready callbacks. %s total", len(self._on_ready_callbacks))
+        logging.info("EDM ready")
+        logging.debug("Calling on_ready callbacks. %s total", len(self._on_ready_callbacks))
         for cb in self._on_ready_callbacks:
             cb()
 
@@ -905,10 +905,10 @@ class Rabbit:
         """Captures interupt signals"""
         if not self._closing:
             # finish processing any current messages
-            self.logger.info("Got KeyboardInterrupt. Closing gracefully.")
-            self.logger.info("Send signal again for hard shutdown.")
+            logging.info("Got KeyboardInterrupt. Closing gracefully.")
+            logging.info("Send signal again for hard shutdown.")
             self.stop()
         else:
             # close now, interupting any currently processing messages
-            self.logger.info("Hard shutdown!")
+            logging.info("Hard shutdown!")
             os._exit(0)  # pylint: disable=protected-access
