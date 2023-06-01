@@ -280,7 +280,7 @@ class Rabbit:
             client_properties={"connection_name": self.connection_name},
         )
 
-        self.logger.info("Connecting to %s", parameters.host)
+        logging.info("Connecting to %s", parameters.host)
         return pika.SelectConnection(
             parameters=parameters,
             on_open_callback=self._on_connection_open,
@@ -292,31 +292,31 @@ class Rabbit:
         """Cleanly close the connection to the MQ."""
         self._closing = True
         if self._connection.is_closing or self._connection.is_closed:
-            self.logger.info("Connection is closing or already closed")
+            logging.info("Connection is closing or already closed")
         else:
-            self.logger.info("Closing connection")
+            logging.info("Closing connection")
             self._connection.close()
 
     def _on_connection_open(self, _unused_connection: Connection) -> None:
         """Called when a new connection to the MQ has been established. Starts opening a channel."""
-        self.logger.info("Connection opened")
+        logging.info("Connection opened")
         self._open_channel()
 
     def _on_connection_open_error(self, _unused_connection: Connection, err: Exception) -> None:
         """Called when a connection cannot be established to the MQ. Stops the ioloop."""
-        self.logger.error("Connection open failed. Stopping execution.")
-        self.logger.error(err)
+        logging.error("Connection open failed. Stopping execution.")
+        logging.error(err)
         self.stop()
 
     def _on_connection_closed(self, _unused_connection: Connection, reason: Exception) -> None:
         """Called when an established connection to the MQ has been closed cleanly."""
-        self.logger.warning("Connection closed: %s", reason)
+        logging.warning("Connection closed: %s", reason)
         self._channel = None
         self._connection.ioloop.stop()
 
     def _open_channel(self) -> None:
         """Opens a new channel to the MQ. Starts exchange setup."""
-        self.logger.debug("Creating a new channel")
+        logging.debug("Creating a new channel")
         self._connection.channel(on_open_callback=self._on_channel_open)
 
     def _on_channel_open(self, channel: Channel) -> None:
@@ -324,7 +324,7 @@ class Rabbit:
         Called when a channel has been successfully opened to the MQ. Calls the after
         channel open callbacks and starts queue setup.
         """
-        self.logger.info("Channel opened")
+        logging.info("Channel opened")
         self._channel = channel
         self._channel.add_on_close_callback(self._on_channel_closed)
         self._channel.add_on_cancel_callback(self._on_consumer_cancelled)
@@ -345,7 +345,7 @@ class Rabbit:
 
     def _on_channel_closed(self, channel: Channel, reason: Exception):
         """Called when a channel has been cleanly closed."""
-        self.logger.warning("Channel %i was closed: %s", channel, reason)
+        logging.warning("Channel %i was closed: %s", channel, reason)
         for cb in self._on_channel_closed_callbacks:
             cb(reason)
         self._close_connection()
@@ -356,13 +356,13 @@ class Rabbit:
 
     def _on_consumer_cancelled(self, method_frame: Method) -> None:
         """Called when a consumer has been canceled either by the MQ or this service."""
-        self.logger.info("Consumer was cancelled remotely: %r", method_frame)
+        logging.info("Consumer was cancelled remotely: %r", method_frame)
 
     def _on_message_reject_cb(
         self, channel: Channel, method: Basic.Return, properties: BasicProperties, body: bytes
     ) -> None:
         """Called when a basic.reject has been issued for a message that this service sent."""
-        self.logger.error(
+        logging.error(
             "message was rejected: '%s'. Exchange: '%s', Route: '%s', 'CorrelationID: '%s'",
             method.reply_text,
             method.exchange,
@@ -376,7 +376,7 @@ class Rabbit:
 
         :param task_check: Seconds to wait before checking if all tasks have finished
         """
-        self.logger.info("Stopping")
+        logging.info("Stopping")
 
         self._closing = True
         # stop consuming so we don't receive any new messages
@@ -384,7 +384,7 @@ class Rabbit:
         self._thread_pool_executor.shutdown(wait=False)
         # wait until all threads have returned
         if len(self._tasks) != 0:
-            self.logger.info("Pending tasks to complete before shutdown: %s", len(self._tasks))
+            logging.info("Pending tasks to complete before shutdown: %s", len(self._tasks))
             # call in 2 seconds, gives the threads time to ack or reply to messages they've already received
             self._connection.ioloop.call_later(task_check, self.stop)
         else:
@@ -395,7 +395,7 @@ class Rabbit:
         """Called once all messages have been properly processed"""
         self._close_connection()
         self._connection.ioloop.stop()
-        self.logger.info("Stopped")
+        logging.info("Stopped")
 
     def _stop_consuming_all(self) -> None:
         """Cancels all consumers."""
@@ -407,7 +407,7 @@ class Rabbit:
 
     def _stop_consuming(self, queue: Queue) -> None:
         """Cancels the consumer tag"""
-        self.logger.debug("Canceling consumer %s", queue.consumer_tag)
+        logging.debug("Canceling consumer %s", queue.consumer_tag)
         cb = functools.partial(self._on_cancelok, queue=queue)
         self._channel.basic_cancel(queue.consumer_tag, cb)
 
@@ -418,12 +418,12 @@ class Rabbit:
 
     def _on_cancelok(self, _unused_frame: Method, queue: Queue) -> None:
         """Called when a consumer is canceld."""
-        self.logger.info("RabbitMQ acknowledged the cancellation of the consumer: %s", queue.consumer_tag)
+        logging.info("RabbitMQ acknowledged the cancellation of the consumer: %s", queue.consumer_tag)
         queue.consumer_tag = None
 
     def _setup_exchange(self, exchange: Exchange) -> None:
         """Set up an exchange."""
-        self.logger.info("Declaring exchange: %s", exchange.name)
+        logging.info("Declaring exchange: %s", exchange.name)
         cb = functools.partial(self._on_exchange_declareok, exchange=exchange)
         self._channel.exchange_declare(
             exchange=exchange.name,
@@ -436,13 +436,13 @@ class Rabbit:
 
     def _on_exchange_declareok(self, _unused_frame: Method, exchange: Exchange) -> None:
         """Called when an exchanges is successfully declared."""
-        self.logger.debug("Exchange declared: %s", exchange.name)
+        logging.debug("Exchange declared: %s", exchange.name)
         for queue in self._queue_manager.queue_bindings[exchange.name]:
             self._setup_queue(queue, exchange)
 
     def _setup_queue(self, queue: Queue, exchange: Optional[Exchange] = None) -> None:
         """Set up a queue."""
-        self.logger.info("Declaring queue %s", queue.name)
+        logging.info("Declaring queue %s", queue.name)
         cb = functools.partial(self._on_queue_declare_ok, queue=queue, exchange=exchange)
         self._channel.queue_declare(
             queue=queue.name,
@@ -467,17 +467,17 @@ class Rabbit:
                     "Cannot bind queue '{}' to exchange '{}' with no routing keys".format(queue.name, exchange.name)
                 )
             for key in queue.bindings:
-                self.logger.info("Binding queue %s to exchange %s with routing key %s", queue.name, exchange.name, key)
+                logging.info("Binding queue %s to exchange %s with routing key %s", queue.name, exchange.name, key)
                 cb = functools.partial(self._on_bindok, queue=queue, routing_key=key)
                 self._channel.queue_bind(queue.name, exchange.name, routing_key=key, callback=cb)
         else:
             # bind to default exchange
-            self.logger.info("Queue %s bound to the default exchange using the name as the routing key", queue.name)
+            logging.info("Queue %s bound to the default exchange using the name as the routing key", queue.name)
         self._set_qos(queue)
 
     def _on_bindok(self, _unused_frame: Method, queue, routing_key: str) -> None:
         """Called when a queue has been successfully bound to an exchange"""
-        self.logger.debug("Queue bound '%s' with routing key '%s'", queue.name, routing_key)
+        logging.debug("Queue bound '%s' with routing key '%s'", queue.name, routing_key)
 
     def _set_qos(self, queue: Queue) -> None:
         """Sets the prefect count for the queue"""
@@ -486,15 +486,15 @@ class Rabbit:
 
     def _on_basic_qos_ok(self, _unused_frame: Method, queue: Queue) -> None:
         """Called when the prefect count for a queue has been successfully set. Starting consuming of the queue."""
-        self.logger.debug("QOS set to: %d", self._prefetch_count)
+        logging.debug("QOS set to: %d", self._prefetch_count)
         self._start_consuming(queue)
 
     def _start_consuming(self, queue: Queue) -> None:
         """Starts consuming the queue."""
-        self.logger.info("Starting consumer for queue %s", queue.name)
+        logging.info("Starting consumer for queue %s", queue.name)
         cb = functools.partial(self._on_message, queue=queue)
         queue.consumer_tag = self._channel.basic_consume(queue.name, cb)
-        self.logger.debug("Started consumer %s with tag %s", queue.name, queue.consumer_tag)
+        logging.debug("Started consumer %s with tag %s", queue.name, queue.consumer_tag)
 
         if self._is_ready():
             self._on_ready()
@@ -521,16 +521,16 @@ class Rabbit:
         queue: Queue,
     ) -> None:
         """Called when a new message is received. Checks the content encoding and content type. Starts a new thread to process the message."""
-        self.logger.debug("Received message # %s from %s", basic_deliver.delivery_tag, properties.app_id)
+        logging.debug("Received message # %s from %s", basic_deliver.delivery_tag, properties.app_id)
 
         if properties.content_encoding != "utf-8":
-            self.logger.error(
+            logging.error(
                 "Rejecting message. Content encoding type must be 'utf-8' not '%s'", properties.content_encoding
             )
             self._reject_message(basic_deliver.delivery_tag)
             return
         if properties.content_type != "application/json":
-            self.logger.error(
+            logging.error(
                 "Rejecting message. Content type must be 'application/json' not '%s'", properties.content_type
             )
             self._reject_message(basic_deliver.delivery_tag)
@@ -539,13 +539,13 @@ class Rabbit:
         # check if the queue has bindings
         if queue.bindings is None:
             # this code should not be reachable since a check should be done before consuming from a queue with no bindings
-            self.logger.error("Rejecting message. Queue %s has no bindings specified", queue.name)
+            logging.error("Rejecting message. Queue %s has no bindings specified", queue.name)
             self._reject_message(basic_deliver.delivery_tag)
             return
 
         # ensure the queue has bindings for the routing key
         if basic_deliver.routing_key not in queue.bindings:
-            self.logger.error(
+            logging.error(
                 "Rejecting message. Received message on routing key '%s' but no binding was specified",
                 basic_deliver.routing_key,
             )
@@ -566,7 +566,7 @@ class Rabbit:
 
     def _notify_thread_done(self, task) -> None:
         """Called when a thread finishes"""
-        self.logger.info("Thread finished")
+        logging.info("Thread finished")
         self._tasks.remove(task)
 
     def _callback_wrapper(
@@ -608,52 +608,52 @@ class Rabbit:
                 )
                 self._connection.ioloop.add_callback_threadsafe(reply_cb)
             elif response and not properties.reply_to:
-                self.logger.warning("Callback returned data but no reply to was requested")
+                logging.warning("Callback returned data but no reply to was requested")
             elif not response and reply_expected and properties.reply_to:
-                self.logger.error("Reply-to was requested but no data was returned from the callback")
+                logging.error("Reply-to was requested but no data was returned from the callback")
 
             cb = functools.partial(self._acknowledge_message, delivery_tag=basic_deliver.delivery_tag)
             self._connection.ioloop.add_callback_threadsafe(cb)
         except UnicodeDecodeError as ex:
-            self.logger.error("Could not decode message: %s", ex)
+            logging.error("Could not decode message: %s", ex)
             cb = functools.partial(self._reject_message, delivery_tag=basic_deliver.delivery_tag)
             self._connection.ioloop.add_callback_threadsafe(cb)
         except json.JSONDecodeError as ex:
-            self.logger.error("Could not load message json: %s", ex)
+            logging.error("Could not load message json: %s", ex)
             cb = functools.partial(self._reject_message, delivery_tag=basic_deliver.delivery_tag)
             self._connection.ioloop.add_callback_threadsafe(cb)
         except Exception as ex:  # pylint: disable=broad-except
-            self.logger.error("Error handling callback: %s", ex)
-            self.logger.error("%s", traceback.format_exc())
+            logging.error("Error handling callback: %s", ex)
+            logging.error("%s", traceback.format_exc())
             cb = functools.partial(self._reject_message, delivery_tag=basic_deliver.delivery_tag)
             self._connection.ioloop.add_callback_threadsafe(cb)
 
     def _on_reply_to(self, properties: BasicProperties, body: Union[Dict, List]) -> None:
         """Called when the message is a reply to. Calls the reply to callback based on the Reply-To-Callback header."""
-        self.logger.debug("Processing reply-to")
+        logging.debug("Processing reply-to")
         if properties.headers is None or "Reply-To-Callback" not in properties.headers:
-            self.logger.error("Reply-to is missing the 'Reply-To-Callback' header. Cannot process reply-to")
+            logging.error("Reply-to is missing the 'Reply-To-Callback' header. Cannot process reply-to")
             return None
 
         if properties.headers["Reply-To-Callback"] not in self._reply_to_callbacks:
-            self.logger.error(
+            logging.error(
                 "This service has no method '%s' registered as a reply_to_callback. Cannot process reply-to",
                 properties.headers["Reply-To-Callback"],
             )
             return None
 
         callback_name = properties.headers["Reply-To-Callback"]
-        self.logger.debug("Calling %s to process reply-to", callback_name)
+        logging.debug("Calling %s to process reply-to", callback_name)
         return self._reply_to_callbacks[callback_name](properties, body)
 
     def _reject_message(self, delivery_tag: str) -> None:
         """Rejects and dequeues the message."""
-        self.logger.debug("Rejecting message %s", delivery_tag)
+        logging.debug("Rejecting message %s", delivery_tag)
         self._channel.basic_reject(delivery_tag, requeue=False)
 
     def _acknowledge_message(self, delivery_tag: str) -> None:
         """Acknowledges the message."""
-        self.logger.debug("Acknowledging message %s", delivery_tag)
+        logging.debug("Acknowledging message %s", delivery_tag)
         self._channel.basic_ack(delivery_tag)
 
     def run(self, mq_endpoint: str, username: str = "guest", password: str = "guest") -> None:  # nosec
@@ -701,7 +701,7 @@ class Rabbit:
         :raises ValueError: Raised when reply_to_callback is not set and reply_to is True
         """
         if self._channel is None or not self._channel.is_open:
-            self.logger.error("Channel must be open to publish messages")
+            logging.error("Channel must be open to publish messages")
             return
 
         if not correlation_id:
@@ -745,14 +745,14 @@ class Rabbit:
 
         try:
             self._channel.basic_publish(exchange, routing_key, json.dumps(message), properties, mandatory=mandatory)
-            self.logger.info(
+            logging.info(
                 "Published message to exchange '%s' with routing key '%s' and correlation id '%s'",
                 exchange,
                 routing_key,
                 correlation_id,
             )
         except pika.exceptions.UnroutableError:
-            self.logger.error("Message was unroutable")
+            logging.error("Message was unroutable")
 
     def register_on_message_callback_campus(
         self, queue_name: str, campus_name, bindings: Dict[str, Tuple[Dict, Callable]], max_priority: Optional[int] = None, 
