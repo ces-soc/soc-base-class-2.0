@@ -584,7 +584,7 @@ class Rabbit:
             }
 
             # add extra logging fields
-            self._thread_local.logger = logging.LoggerAdapter(self._event_logger, extra)
+            # self._thread_local.logger = logging.LoggerAdapter(self._event_logger, extra)
 
             # measure execution time of the event
             start_time = time.process_time()
