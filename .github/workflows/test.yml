@@ -46,7 +46,7 @@ jobs:
       run: |
         git config --global credential.helper 'store'
         echo "https://${{secrets.GIT_USERNAME}}:${{secrets.GIT_TOKEN}}@github.com" > ~/.git-credentials
-#         pip install -r requirements.txt
+#       pip install -r requirements.txt
         pip install pylint
     - name: Lint with pylint
       run: |
@@ -148,7 +148,7 @@ jobs:
     - name: Install dependencies
       run: |
         pip install pytest
-#         pip install -r requirements.txt
+#       pip install -r requirements.txt
     - name: Run Unit Tests
       run: |
         # Perform Unit Tests
