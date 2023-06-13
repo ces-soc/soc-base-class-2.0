@@ -20,149 +20,11 @@ from pika.frame import Method
 
 from cessoc.rabbitmq.queue import Queue, QueueDefinitionManager, QueueArguments
 from cessoc.rabbitmq.exchange import Exchange, ExchangeType
-
-print("rabbitmq imported")
-
-# FROM ETL SECTION
-
-def publish_message_campus(
-    campus: str, routing_key: str, body: Dict, reply_to: bool = False, timeout: int = 300
-) -> Optional[Dict]:
-    """
-    Sends a message on the eventhub to this campus exchange on the routing key
-    :param campus: The campus to send the message to
-    :param routing_key: The routing key to send the message to
-    :param body: The body of the message to send
-    :param reply_to: if an reply is expected (blocking until reply is received)
-    :param timeout: The timeout to wait for a response in seconds
-    :return: The dict of the reply if requested
-    """
-    return publish_message(
-        campus.lower(), routing_key, body, reply_to, timeout
-    )
-
-def publish_message(
-    exchange: str,
-    routing_key: str,
-    body: Dict,
-    json_credentials,
-    endpoint,
-    service_name,
-    reply_to: bool = False,
-    timeout: int = 300,
-) -> Optional[Dict]:
-    """
-    Sends a message on the eventhub to the exchange on the routing key
-    :param exchange: The exchange to publish to
-    :param routing_key: The routing key to send the message to
-    :param body: The body of the message to send
-    :param reply_to: if an reply is expected (blocking until reply is received)
-    :param timeout: The timeout to wait for a response in seconds
-    :return: The dict of the reply if requested
-    """
-    # Create connection
-    # json_credentials = self.config["parameters"]["eventhub/secrets/edm/credentials"]
-    # endpoint = self.config["parameters"]["eventhub/config/mq_endpoint"]
-    credentials = pika.PlainCredentials(
-        json_credentials["username"], json_credentials["password"]
-    )
-    connection = pika.BlockingConnection(
-        pika.ConnectionParameters(
-            endpoint,
-            credentials=credentials,
-            ssl_options=pika.SSLOptions(context=ssl.create_default_context()),
-            client_properties={"connection_name": service_name},
-        )
-    )
-
-    # Create channel
-    channel = connection.channel()
-    channel.exchange_declare(
-        exchange, exchange_type="direct", passive=True, durable=True
-    )
-
-    # Setup the replyto queue
-    reply_to_queue = None
-    if reply_to:
-        reply_to_queue = f"replyto.{service_name}"
-        channel.queue_declare(reply_to_queue, exclusive=True, auto_delete=True)
-
-    # Setup some metadata
-    correlation_id = uuid.uuid4().hex
-    headers: Optional[Dict] = None
-    if reply_to:
-        if headers is None:
-            headers = {}
-        headers[
-            "Reply-To-Callback"
-        ] = "inline_blocking"  # Removing this errors out the replying EDM
-
-    properties = pika.BasicProperties(
-        app_id=service_name,
-        user_id="edm",
-        content_type="application/json",
-        content_encoding="utf-8",
-        reply_to=reply_to_queue,
-        correlation_id=correlation_id,
-        priority=None,
-        headers=headers,
-    )
-
-    # Publish the message
-    try:
-        channel.basic_publish(
-            exchange, routing_key, json.dumps(body), properties, mandatory=True
-        )
-        logging.info(
-            "Published message to exchange '%s' with routing key '%s' and correlation id '%s'",
-            exchange,
-            routing_key,
-            correlation_id,
-        )
-    except pika.exceptions.UnroutableError:
-        logging.error("Message was unroutable")
-
-    # Consume all messages on the response queue
-    if reply_to and reply_to_queue is not None:
-        start_time = int(time.time())
-        while start_time + timeout > int(
-            time.time()
-        ):  # Weird looping to accommodate timeout with a generator
-            method_frame, properties, reply_body = channel.basic_get(reply_to_queue)
-            if (
-                method_frame is not None
-                and properties is not None
-                and reply_body is not None
-            ):
-                if (
-                    properties.correlation_id == correlation_id
-                ):  # Only accept the correlated reply
-                    logging.info(
-                        "Reply received with correlation id: %s", correlation_id
-                    )
-                    channel.basic_ack(method_frame.delivery_tag)
-                    channel.cancel()  # Re-queues anything it may have picked up
-                    channel.close()
-                    connection.close()
-                    return json.loads(reply_body)
-                else:  # Reject non-correlated messages
-                    logging.debug("Rejecting message")
-                    channel.basic_nack(method_frame.delivery_tag)
-                channel.cancel()
-                break
-        logging.error(
-            "Message timed out before a reply was received, correlation id: %s",
-            correlation_id,
-        )
-
-    # Clean up connection and channel
-    channel.close()
-    connection.close()
-    return None
+from cessoc.aws import ssm
 
 # FROM EDM SECTION
 
-class Rabbit:
+class EDM:
     """EDM Base Class abstracts Pika connections/actions"""
 
     def __init__(
@@ -912,3 +774,153 @@ class Rabbit:
             # close now, interupting any currently processing messages
             logging.info("Hard shutdown!")
             os._exit(0)  # pylint: disable=protected-access
+
+
+# FROM ETL SECTION
+
+def publish_message_campus(
+    campus: str, routing_key: str, body: Dict, service_name: str, json_credentials: Optional[Dict] = None, endpoint: Optional[str] = None, reply_to: bool = False, timeout: int = 300
+) -> Optional[Dict]:
+    """
+    Sends a message on the eventhub to this campus exchange on the routing key
+    Requires access to `/ces/eventhub/secrets/edm/credentials` and `/ces/eventhub/config/mq_endpoint in parameter store
+    :param campus: The campus to send the message to
+    :param routing_key: The routing key to send the message to
+    :param body: The body of the message to send
+    :param reply_to: if an reply is expected (blocking until reply is received)
+    :param timeout: The timeout to wait for a response in seconds
+    :return: The dict of the reply if requested
+    """
+    return publish_message(
+        exchange=campus.lower(), 
+        routing_key=routing_key, 
+        body=body, 
+        service_name=service_name,
+        json_credentials=json_credentials,
+        endpoint=endpoint,
+        reply_to=reply_to, 
+        timeout=timeout, 
+    )
+
+def publish_message(
+    exchange: str,
+    routing_key: str,
+    body: Dict,
+    service_name,
+    json_credentials: Optional[Dict] = None,
+    endpoint: Optional[str] = None,
+    reply_to: bool = False,
+    timeout: int = 300,
+) -> Optional[Dict]:
+    """
+    Sends a message on the eventhub to the exchange on the routing key
+    Requires access to `/ces/eventhub/secrets/edm/credentials` and `/ces/eventhub/config/mq_endpoint in parameter store
+    :param exchange: The exchange to publish to
+    :param routing_key: The routing key to send the message to
+    :param body: The body of the message to send
+    :param reply_to: if an reply is expected (blocking until reply is received)
+    :param timeout: The timeout to wait for a response in seconds
+    :return: The dict of the reply if requested
+    """
+    # Create connection
+    if not json_credentials:
+        json_credentials = json.loads(ssm.get_value("/ces/eventhub/secrets/edm/credentials"))
+    if not endpoint:
+        endpoint = ssm.get_value("/ces/eventhub/config/mq_endpoint")
+
+    credentials = pika.PlainCredentials(
+        json_credentials["username"], json_credentials["password"]
+    )
+    connection = pika.BlockingConnection(
+        pika.ConnectionParameters(
+            endpoint,
+            credentials=credentials,
+            ssl_options=pika.SSLOptions(context=ssl.create_default_context()),
+            client_properties={"connection_name": service_name},
+        )
+    )
+
+    # Create channel
+    channel = connection.channel()
+    channel.exchange_declare(
+        exchange, exchange_type="direct", passive=True, durable=True
+    )
+
+    # Setup the replyto queue
+    reply_to_queue = None
+    if reply_to:
+        reply_to_queue = f"replyto.{service_name}"
+        channel.queue_declare(reply_to_queue, exclusive=True, auto_delete=True)
+
+    # Setup some metadata
+    correlation_id = uuid.uuid4().hex
+    headers: Optional[Dict] = None
+    if reply_to:
+        if headers is None:
+            headers = {}
+        headers[
+            "Reply-To-Callback"
+        ] = "inline_blocking"  # Removing this errors out the replying EDM
+
+    properties = pika.BasicProperties(
+        app_id=service_name,
+        user_id="edm",
+        content_type="application/json",
+        content_encoding="utf-8",
+        reply_to=reply_to_queue,
+        correlation_id=correlation_id,
+        priority=None,
+        headers=headers,
+    )
+
+    # Publish the message
+    try:
+        channel.basic_publish(
+            exchange, routing_key, json.dumps(body), properties, mandatory=True
+        )
+        logging.info(
+            "Published message to exchange '%s' with routing key '%s' and correlation id '%s'",
+            exchange,
+            routing_key,
+            correlation_id,
+        )
+    except pika.exceptions.UnroutableError:
+        logging.error("Message was unroutable")
+
+    # Consume all messages on the response queue
+    if reply_to and reply_to_queue is not None:
+        start_time = int(time.time())
+        while start_time + timeout > int(
+            time.time()
+        ):  # Weird looping to accommodate timeout with a generator
+            method_frame, properties, reply_body = channel.basic_get(reply_to_queue)
+            if (
+                method_frame is not None
+                and properties is not None
+                and reply_body is not None
+            ):
+                if (
+                    properties.correlation_id == correlation_id
+                ):  # Only accept the correlated reply
+                    logging.info(
+                        "Reply received with correlation id: %s", correlation_id
+                    )
+                    channel.basic_ack(method_frame.delivery_tag)
+                    channel.cancel()  # Re-queues anything it may have picked up
+                    channel.close()
+                    connection.close()
+                    return json.loads(reply_body)
+                else:  # Reject non-correlated messages
+                    logging.debug("Rejecting message")
+                    channel.basic_nack(method_frame.delivery_tag)
+                channel.cancel()
+                break
+        logging.error(
+            "Message timed out before a reply was received, correlation id: %s",
+            correlation_id,
+        )
+
+    # Clean up connection and channel
+    channel.close()
+    connection.close()
+    return None
