@@ -1,7 +1,8 @@
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 import boto3
 from botocore.exceptions import ClientError
+
 
 def get_value(
     path: str,
@@ -35,6 +36,7 @@ def get_value(
         logging.debug("Auth keys not preset, using default AWS keys")
         ssm = boto3.client("ssm", region_name=region)
         return ssm.get_parameter(Name=path, WithDecryption=True)["Parameter"]["Value"]
+
 
 def get_all(
     path: str,
@@ -108,6 +110,7 @@ def get_all(
         param_dict[parameter["Name"]] = parameter["Value"]
     return param_dict
 
+
 def put_value(
     path: str,
     value: str,
@@ -171,5 +174,4 @@ def put_value(
         logging.debug("Auth keys not preset, using default AWS keys")
         ssm = boto3.client("ssm", region_name=region)
         _put(ssm, path, value)
-
 
