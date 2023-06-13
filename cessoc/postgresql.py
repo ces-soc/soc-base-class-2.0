@@ -6,7 +6,12 @@ print("postgresql imported")
 class postgresql:
     def __init__(self, host, database, user, password, port=5432):
         self.connection = pg.connect(
-            host=host, database=database, user=user, password=password, port=port)
+            host=host,
+            database=database, 
+            user=user, 
+            password=password, 
+            port=port
+        )
 
     def create(self, query):
         cursor = self.connection.cursor()
