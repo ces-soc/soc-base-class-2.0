@@ -1,7 +1,5 @@
 import base64
 
-print("util imported")
-
 def bytes_to_str(value: bytes) -> str:
     """
     :param value: A bytes object

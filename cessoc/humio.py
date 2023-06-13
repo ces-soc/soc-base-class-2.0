@@ -1,4 +1,3 @@
-print("humio imported")
 # TODO add timeout for humio send
 
 import json

@@ -3,9 +3,6 @@ from typing import Dict, List, Optional
 import boto3
 from botocore.exceptions import ClientError
 
-
-print("ssm imported")
-
 def get_value(
     path: str,
     access_key: Optional[str] = None,
@@ -39,9 +36,9 @@ def get_value(
         ssm = boto3.client("ssm", region_name=region)
         return ssm.get_parameter(Name=path, WithDecryption=True)["Parameter"]["Value"]
 
-def get_parameters_of_path(
+def get_all(
     path: str,
-    recursive: bool = True,
+    recursive: bool = False,
     access_key: Optional[str] = None,
     secret_key: Optional[str] = None,
     region: str = "us-west-2",
@@ -49,6 +46,7 @@ def get_parameters_of_path(
     """
     Gets dictionary of all the parameters under the given path from the Parameter Store.
     Example of a valid path: /etl-template/endpoints (campus is prepended)
+    By default will only get parameters directly under the path, but can be set to recursive to get all parameters recursively.
 
     :param path: Name of the path to the SSM parameter
     :param recursive: Retrieve parameters from any sub paths
