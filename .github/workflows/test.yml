@@ -1,0 +1,155 @@
+name: Tests
+on:
+  pull_request:
+    branches: [main, dev]
+
+# https://github.community/t/feature-request-conditional-required-checks/16761/10
+#    tags-ignore:
+#      - (?i)documentation
+#      - (?i)wip
+#      - (?i)docs
+#    paths-ignore:
+#      - '**.md'
+
+env:
+  node-version: "12.x"
+
+jobs:
+  flake8-linting:
+    name: Flake8 Linting
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set Up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        pip install flake8 flake8-eradicate flake8-print
+    - name: Lint with flake8
+      run: |
+        # Perform Flake8 linting, exclude rules detailed in readthedocs
+        flake8 --ignore=E261,E262,E501,E902,D413,D400,D401,D205,D104,D100,W291,W293 .
+  
+
+  pylint-linting:
+    name: Pylint Linting
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set Up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        git config --global credential.helper 'store'
+        echo "https://${{secrets.GIT_USERNAME}}:${{secrets.GIT_TOKEN}}@github.com" > ~/.git-credentials
+        pip install -r requirements.txt
+        pip install pylint
+    - name: Lint with pylint
+      run: |
+        # Perform Pylint linting, exclude rules detailed in readthedocs
+        pylint \
+          --fail-under=7.0 \
+          --ignore-patterns=test_.*?py \
+          --jobs=0 \
+          --extension-pkg-whitelist=pyodbc \
+          --load-plugins=pylint.extensions.docparams,pylint.extensions.bad_builtin \
+          --disable=trailing-whitespace,attribute-defined-outside-init \
+          --argument-naming-style=snake_case \
+          --attr-naming-style=snake_case \
+          --class-attribute-naming-style=snake_case \
+          --class-naming-style=PascalCase \
+          --const-naming-style=UPPER_CASE \
+          --docstring-min-length=-1 \
+          --function-naming-style=snake_case \
+          --good-names=i,j,k,ex,cb,_ \
+          --inlinevar-naming-style=snake_case \
+          --method-naming-style=snake_case \
+          --module-naming-style=snake_case \
+          --no-docstring-rgx=^_ \
+          --variable-naming-style=snake_case \
+          --logging-format-style=old \
+          --check-quote-consistency=no \
+          --check-str-concat-over-line-jumps=no \
+          --expected-line-ending-format=LF \
+          --indent-after-paren=4 \
+          --indent-string='    ' \
+          --max-line-length=240 \
+          --max-module-lines=1000 \
+          --max-spelling-suggestions=4 \
+          --spelling-dict= \
+          --spelling-ignore-words= \
+          --spelling-private-dict-file= \
+          --spelling-store-unknown-words=no \
+          --max-args=10 \
+          --max-attributes=7 \
+          --max-bool-expr=5 \
+          --max-branches=12 \
+          --max-locals=15 \
+          --max-parents=7 \
+          --max-public-methods=20 \
+          --max-returns=6 \
+          --max-statements=50 \
+          --min-public-methods=2 \
+          --accept-no-param-doc=yes \
+          --accept-no-raise-doc=yes \
+          --accept-no-return-doc=yes \
+          --accept-no-yields-doc=yes \
+          --default-docstring-type=sphinx \
+          *.py
+      
+                        
+  bandit-linting:
+    name: Bandit Security Checks
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set Up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        pip install bandit
+    - name: Run Bandit Security Tests
+      run: |
+        # Perform Static Security checks, exclude low-level alerts
+        bandit -r -ll .
+        
+#  docker-linting:
+#    name: Docker Linting
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#      - name: Set up Node.js
+#        uses: actions/setup-node@v1
+#        with:
+#          node-version: ${{ env.node_version }}
+#      - name: Run Docker Linter
+#        run: |
+#          # Run docker linter, ignore non-pinned packages in apt-get
+#          npx dockerlinter -f ./Dockerfile -e -i ER0012
+      
+  pytest:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: de-vri-es/setup-git-credentials@v2
+      with:
+        credentials: https://${{secrets.GIT_USERNAME}}:${{secrets.GIT_TOKEN}}@github.com
+    - name: Set Up Python 3.10
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        pip install pytest
+        pip install -r requirements.txt
+    - name: Run Unit Tests
+      run: |
+        # Perform Unit Tests
+        pytest
