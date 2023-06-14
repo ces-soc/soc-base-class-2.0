@@ -1,3 +1,6 @@
+"""
+This module contains miscellaneous utility functions for the cessoc package.
+"""
 import base64
 
 

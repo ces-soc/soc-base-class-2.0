@@ -17,6 +17,10 @@ class Postgresql:
         )
 
     def query(self, query):
+        """
+        Sends a query to the postgresql database and returns the results.
+        :param query: The query to be sent to the database
+        """
         cursor = self.connection.cursor()
         cursor.execute(query)
         results = cursor.fetchall()

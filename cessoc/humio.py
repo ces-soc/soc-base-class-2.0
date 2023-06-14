@@ -1,4 +1,7 @@
-# TODO add timeout for humio send
+"""
+This module is used to send data to Humio.
+"""
+# TODO add timeout for humio send # pylint: disable=fixme
 
 import json
 import logging
@@ -57,7 +60,7 @@ def _send_humio(
             resp = session.post(
                 endpoint,
                 json=data,
-                headers={"Authorization": "Bearer " + token},
+                headers={"Authorization": "Bearer " + f"{token}"},
             )
             resp.raise_for_status()
 
@@ -65,7 +68,7 @@ def _send_humio(
                 f"Event batch of size {len(data[0]['messages'])} has been sent to Humio"
             )
     except ClientError as ex:
-        raise Exception("Unable to get humio endpoint/ingest_token") from ex
+        raise Exception("Unable to get humio endpoint/ingest_token") from ex # pylint: disable=raise-missing-from
 
 
 def write(
@@ -85,7 +88,8 @@ def write(
     :param endpoint: Select Humio endpoint to write data
     :param token: Humio-generated ingest token
     :param metadata: Optional list of dictionaries for any other information that may be valuable/necessary
-
+    :param chunk_size: Number of events to send per POST request to Humio
+    
     :raises Exception: general exception for raised exceptions from humio functions
     """
     if not isinstance(data, list):

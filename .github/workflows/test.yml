@@ -47,6 +47,9 @@ jobs:
         git config --global credential.helper 'store'
         echo "https://${{secrets.GIT_USERNAME}}:${{secrets.GIT_TOKEN}}@github.com" > ~/.git-credentials
         pip install pylint
+        pip install requests
+        pip install urllib3
+        pip install botocore
     - name: Lint with pylint
       run: |
         # Perform Pylint linting, exclude rules detailed in readthedocs

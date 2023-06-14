@@ -22,6 +22,7 @@ class HealthCheck:
         :param token: The humio ingest token
         :param service_name: The name of the service sending the healthcheck
         :param endpoint: The humio ingest endpoint
+        
         """
         if endpoint is None:
             endpoint = ssm.get_value("/byu/secops-humio/config/api_endpoint") + "ingest/humio-unstructured"
