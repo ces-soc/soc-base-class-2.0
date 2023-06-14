@@ -152,7 +152,7 @@ jobs:
         pip install pytest
         pip install requests
         pip install boto3
-        pip install dateutil
+        pip install datetime
     - name: Run Unit Tests
       run: |
         # Perform Unit Tests
