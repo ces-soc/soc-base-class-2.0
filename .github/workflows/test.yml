@@ -98,7 +98,7 @@ jobs:
           --accept-no-return-doc=yes \
           --accept-no-yields-doc=yes \
           --default-docstring-type=sphinx \
-          *.py
+          cessoc/*.py
       
                         
   bandit-linting:
