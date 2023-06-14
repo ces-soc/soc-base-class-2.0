@@ -90,17 +90,7 @@ class Queue:
         :returns: results of comparison (boolean)
         """
         if isinstance(value, Queue):
-            return self is value or (
-                self.name == value.name and
-                self.bindings == value.bindings and
-                self.consumer_tag == value.consumer_tag and
-                self.consume == value.consume and
-                self.passive == value.passive and
-                self.durable == value.durable and
-                self.exclusive == value.exclusive and
-                self.auto_delete == value.auto_delete and
-                self._arguments == value._arguments
-            )
+            return self is value or ( self.name == value.name and self.bindings == value.bindings and self.consumer_tag == value.consumer_tag and self.consume == value.consume and self.passive == value.passive and self.durable == value.durable and self.exclusive == value.exclusive and self.auto_delete == value.auto_delete and self._arguments == value._arguments)
         return False
 
     @property
