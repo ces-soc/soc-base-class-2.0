@@ -1,6 +1,7 @@
 import pytest
 from cessoc.rabbitmq.exchange import Exchange, ExchangeType
 
+
 @pytest.fixture(scope="function")
 def exchange_name():
     """Default exchange name"""

@@ -2,6 +2,7 @@ import pytest
 from cessoc.rabbitmq.queue import Queue, QueueArguments, QueueDefinitionManager
 from cessoc.rabbitmq.exchange import Exchange, ExchangeType
 
+
 @pytest.fixture(scope="function")
 def queue_arguments():
     """Returns queue arguments"""

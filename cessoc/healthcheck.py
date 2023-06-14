@@ -25,6 +25,5 @@ class healthcheck:
             "service_name": f"{service_name}",
             "data": custom_data,
         }]
-        
+
         humio.write(data=healthdata, endpoint=endpoint, token=token, path="healthcheck")
-        

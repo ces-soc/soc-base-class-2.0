@@ -51,12 +51,12 @@ class Exchange:
         """
         if isinstance(value, Exchange):
             return self is value or (
-                self.name == value.name
-                and self.exchange_type == value.exchange_type
-                and self.passive == value.passive
-                and self.durable == value.durable
-                and self.auto_delete == value.auto_delete
-                and self.internal == value.internal
+                self.name == value.name and
+                self.exchange_type == value.exchange_type and
+                self.passive == value.passive and
+                self.durable == value.durable and
+                self.auto_delete == value.auto_delete and
+                self.internal == value.internal
             )
         return False
 

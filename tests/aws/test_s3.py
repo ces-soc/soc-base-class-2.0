@@ -2,6 +2,7 @@ from cessoc.aws import s3
 import pytest
 from botocore.exceptions import ClientError, ParamValidationError
 
+
 def test_write_type_error():
     """Ensures write is raising exceptions on type values"""
     bad_entry = set()
@@ -10,6 +11,7 @@ def test_write_type_error():
     bad_entry = tuple()
     with pytest.raises(TypeError):
         s3.write(bad_entry)
+
 
 def test_s3_access_denied():
     """Test s3 connections"""
@@ -32,6 +34,7 @@ def test_s3_access_denied():
             region_name="us-west-2",
         )
 
+
 def test_s3_put_types():
     """Data input to s3 can only be str, bytes, or file-like object"""
 
@@ -42,6 +45,7 @@ def test_s3_put_types():
             body={},
             region_name="us-west-2",
         )
+
 
 def test_s3_get_failure():
     """Test s3 function isn't hiding exceptions"""

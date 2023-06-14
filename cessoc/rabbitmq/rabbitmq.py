@@ -406,18 +406,6 @@ class EDM:
     ) -> None:
         """Used to help with error handling of the message. Decodes the message body and calls the message callback. Sends reply to if requested."""
         try:
-            # set extra logging parameters
-            extra = {
-                "exchange": basic_deliver.exchange,
-                "routing_key": basic_deliver.routing_key,
-                "correlation_id": properties.correlation_id,
-                "app_id": properties.app_id,
-                "user_id": properties.user_id,
-            }
-
-            # add extra logging fields
-            # self._thread_local.logger = logging.LoggerAdapter(self._event_logger, extra)
-
             # measure execution time of the event
             start_time = time.process_time()
 
@@ -771,6 +759,7 @@ def publish_message_campus(
         reply_to=reply_to, 
         timeout=timeout, 
     )
+
 
 def publish_message(
     exchange: str,

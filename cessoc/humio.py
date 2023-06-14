@@ -107,4 +107,3 @@ def write(
             chunk.append(json.dumps(event))
         chunks.append([{"messages": chunk}])
     _send_humio(chunks, endpoint, token)
-    

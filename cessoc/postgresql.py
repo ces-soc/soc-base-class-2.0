@@ -1,6 +1,7 @@
-import psycopg2 as pg # psycopg2-binary
+import psycopg2 as pg  # psycopg2-binary
 from typing import Optional
 from cessoc.aws import ssm
+
 
 class postgresql:
     def __init__(self, database, user, password, host: Optional[str] = ssm.get_value('/ces/data_store/rds_host'), port: Optional[int] = 5432):
@@ -19,4 +20,3 @@ class postgresql:
         self.connection.commit()
         cursor.close()
         return results
-        
