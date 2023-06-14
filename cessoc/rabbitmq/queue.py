@@ -1,7 +1,6 @@
 """Queue classes to make defining pika queues easier"""
 
 from typing import List, Dict, Callable, Optional, Tuple, Union, Any
-from xmlrpc.client import Boolean
 from cessoc.rabbitmq.exchange import Exchange, ExchangeType
 
 

@@ -12,7 +12,6 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from typing import List, Dict, Callable, Union, Optional, Tuple
 import pika
 
-from pythonjsonlogger import jsonlogger
 from pika.channel import Channel
 from pika.connection import Connection
 from pika.spec import BasicProperties, Basic
@@ -24,6 +23,7 @@ from cessoc.aws import ssm
 
 # FROM EDM SECTION
 
+
 class EDM:
     """EDM Base Class abstracts Pika connections/actions"""
 
@@ -34,14 +34,7 @@ class EDM:
         connection_name: Optional[str] = None,
         file_logging=False,
         heartbeat=10,
-        # config_manager: ConfigManager = None,
     ) -> None:
-        # """Initialize defaults, set prefetch count if increased performance is required"""
-        # if config_manager is None:
-        #     self.config_manager = ConfigManager(file_log=file_logging)
-        # else:
-        #     self.config_manager = config_manager
-        # self.config = self.config_manager.config
         self.parameters: Dict = {}
 
         # This line should come after the config manager is intialized because the config_manager configures the root logger
@@ -99,29 +92,6 @@ class EDM:
         ):  # only capture when running as the main thread, call stop if running in a different thread
             signal.signal(signal.SIGINT, self._shutdown_interupt_cb)
             signal.signal(signal.SIGTERM, self._shutdown_interupt_cb)
-
-#### LOGGER STUFF
-
-        # # set specialized event logger and add event specific data to the log
-        # self._event_logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}.message")
-        # # do not propagate logs to parents (ie. the root logger). Otherwise logs will be logged twice or more
-        # self._event_logger.propagate = False
-        # # set logging to stdout
-        # event_ch = self.config_manager.get_logging_handler()
-        
-        # # color is not supported, we no longer want to support color
-        # event_ch.setFormatter(
-        #     jsonlogger.JsonFormatter(
-        #         "%(asctime)s %(levelname)s %(thread)d %(lineno)d %(name)s %(funcName)s "
-        #         "%(exchange)s %(routing_keys)s %(correlation_id)s %(app_id)s %(user_id)s %(message)s"
-        #     )
-        # )
-
-        # # services like AWS lambda persist the logger sometimes in between runs. This removes any previous handlers/instances
-        # if len(self._event_logger.handlers) != 0:
-        #     self._event_logger.handlers = []
-        # # add handler to logger
-        # self._event_logger.addHandler(event_ch)
 
         self._thread_local = threading.local()
 

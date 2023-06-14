@@ -1,11 +1,13 @@
 # TODO add timeout for humio send
 
 import json
-from typing import Dict, List, Optional
+import logging
+from typing import List, Optional
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from botocore.exceptions import ClientError
+
 
 def _send_humio(
     chunked_data: List,
@@ -59,11 +61,12 @@ def _send_humio(
             )
             resp.raise_for_status()
             
-            # self.logger.info( TODO log this
-            #     f"Event batch of size {len(data[0]['messages'])} has been sent to Humio"
-            # )
+            logging.info( 
+                f"Event batch of size {len(data[0]['messages'])} has been sent to Humio"
+            )
     except ClientError as ex:
         raise Exception("Unable to get humio endpoint/ingest_token") from ex
+
 
 def write(
     data: List,
@@ -104,3 +107,4 @@ def write(
             chunk.append(json.dumps(event))
         chunks.append([{"messages": chunk}])
     _send_humio(chunks, endpoint, token)
+    

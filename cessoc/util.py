@@ -1,5 +1,6 @@
 import base64
 
+
 def bytes_to_str(value: bytes) -> str:
     """
     :param value: A bytes object
@@ -8,6 +9,7 @@ def bytes_to_str(value: bytes) -> str:
     byte = base64.b64encode(value)
     byte_str = byte.decode("utf-8")
     return byte_str
+
 
 def str_to_bytes(value: str) -> bytes:
     """

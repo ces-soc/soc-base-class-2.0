@@ -3,6 +3,7 @@ from cessoc.aws import ssm
 import time
 from typing import Optional
 
+
 class healthcheck:
     """
     Sends information to humio with pre-defined fields in addition to a custom field.
@@ -16,7 +17,7 @@ class healthcheck:
 
         :param custom_data: The custom data to be sent to humio. Must be a json object
         """
-        if endpoint == None:
+        if endpoint is None:
             endpoint = ssm.get_value("/byu/secops-humio/config/api_endpoint") + "ingest/humio-unstructured"
         healthdata = [{
             "start_time": f"{self.start_time}",
@@ -26,3 +27,4 @@ class healthcheck:
         }]
         
         humio.write(data=healthdata, endpoint=endpoint, token=token, path="healthcheck")
+        

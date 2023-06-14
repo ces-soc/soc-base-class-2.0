@@ -174,4 +174,3 @@ def put_value(
         logging.debug("Auth keys not preset, using default AWS keys")
         ssm = boto3.client("ssm", region_name=region)
         _put(ssm, path, value)
-

@@ -1,8 +1,8 @@
 import logging
-import json
-from typing import Dict, List, Union, Optional
+from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
+
 
 def write(
     key: str,
@@ -37,6 +37,7 @@ def write(
     except ClientError as ex:
         logging.error("Could not put to s3: %s", ex)
         raise ex
+        
         
 def read(
     key: str,
