@@ -1,3 +1,6 @@
+"""
+The ssm module provides functionality for interacting with AWS SSM Parameter Store
+"""
 import logging
 from typing import Dict, Optional
 import boto3

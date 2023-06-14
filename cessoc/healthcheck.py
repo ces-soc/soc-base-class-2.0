@@ -1,10 +1,13 @@
-from cessoc import humio
-from cessoc.aws import ssm
+"""
+The healthcheck package provides standard healthcheck functionality for cessoc services.
+"""
 import time
 from typing import Optional
+from cessoc import humio
+from cessoc.aws import ssm
 
 
-class healthcheck:
+class HealthCheck:
     """
     Sends information to humio with pre-defined fields in addition to a custom field.
     """
@@ -16,6 +19,9 @@ class healthcheck:
         Sends the healthcheck data to humio.
 
         :param custom_data: The custom data to be sent to humio. Must be a json object
+        :param token: The humio ingest token
+        :param service_name: The name of the service sending the healthcheck
+        :param endpoint: The humio ingest endpoint
         """
         if endpoint is None:
             endpoint = ssm.get_value("/byu/secops-humio/config/api_endpoint") + "ingest/humio-unstructured"

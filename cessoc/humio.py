@@ -40,7 +40,7 @@ def _send_humio(
             raise ValueError("endpoint must be provided")
         if not token:
             raise ValueError("token must be provided")
-        
+
         # Create a HTTP session
         retry_strategy = Retry(
             total=3,
@@ -60,8 +60,8 @@ def _send_humio(
                 headers={"Authorization": "Bearer " + token},
             )
             resp.raise_for_status()
-            
-            logging.info( 
+
+            logging.info(
                 f"Event batch of size {len(data[0]['messages'])} has been sent to Humio"
             )
     except ClientError as ex:
@@ -103,7 +103,7 @@ def write(
     chunks = []
     for i in range(0, len(data), chunk_size):
         chunk = []
-        for event in data[i : i + chunk_size]:  # noqa:
+        for event in data[i: i + chunk_size]:  # noqa:
             chunk.append(json.dumps(event))
         chunks.append([{"messages": chunk}])
     _send_humio(chunks, endpoint, token)
