@@ -853,11 +853,7 @@ def publish_message(
             time.time()
         ):  # Weird looping to accommodate timeout with a generator
             method_frame, properties, reply_body = channel.basic_get(reply_to_queue)
-            if (
-                method_frame is not None
-                and properties is not None
-                and reply_body is not None
-            ):
+            if (method_frame is not None and properties is not None and reply_body is not None):
                 if (
                     properties.correlation_id == correlation_id
                 ):  # Only accept the correlated reply
