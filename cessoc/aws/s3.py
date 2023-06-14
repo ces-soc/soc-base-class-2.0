@@ -1,8 +1,11 @@
+"""
+The s3 package provides standard s3 functionality for cessoc services.
+"""
 import logging
-import json
-from typing import Dict, List, Union, Optional
+from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
+
 
 def write(
     key: str,
@@ -27,7 +30,10 @@ def write(
     logging.debug("Putting data to %s in s3 bucket %s", key, bucket)
     if access_key and secret_key:
         client = boto3.client(
-            "s3", aws_access_key_id=access_key, aws_secret_access_key=secret_key, region_name=region_name
+            "s3",
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+            region_name=region_name
         )
     else:
         client = boto3.client("s3", region_name=region_name)
@@ -37,7 +43,8 @@ def write(
     except ClientError as ex:
         logging.error("Could not put to s3: %s", ex)
         raise ex
-        
+
+
 def read(
     key: str,
     bucket: str,

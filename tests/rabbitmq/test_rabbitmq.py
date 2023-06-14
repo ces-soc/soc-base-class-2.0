@@ -1,11 +1,11 @@
 import datetime
-from io import StringIO
 from dateutil.tz import tzutc
 import pytest
 import boto3
 from botocore.exceptions import ClientError, ParamValidationError
 
 from cessoc.rabbitmq import rabbitmq as rabbit
+
 
 class MockBoto3Client:
     """Defines mock functions for boto3 s3 get_object()"""
@@ -120,6 +120,7 @@ def instance():
     """Run once per instantiation of class"""
     boto3.client = MockBoto3Client
     return rabbit.EDM()
+
 
 class TestEDM:
     """Test EDM Base Class"""

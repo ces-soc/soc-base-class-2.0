@@ -1,11 +1,16 @@
-# TODO add timeout for humio send
+"""
+This module is used to send data to Humio.
+"""
+# TODO add timeout for humio send # pylint: disable=fixme
 
 import json
-from typing import Dict, List, Optional
+import logging
+from typing import List, Optional
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from botocore.exceptions import ClientError
+
 
 def _send_humio(
     chunked_data: List,
@@ -38,7 +43,7 @@ def _send_humio(
             raise ValueError("endpoint must be provided")
         if not token:
             raise ValueError("token must be provided")
-        
+
         # Create a HTTP session
         retry_strategy = Retry(
             total=3,
@@ -55,15 +60,16 @@ def _send_humio(
             resp = session.post(
                 endpoint,
                 json=data,
-                headers={"Authorization": "Bearer " + token},
+                headers={"Authorization": "Bearer " + f"{token}"},
             )
             resp.raise_for_status()
-            
-            # self.logger.info( TODO log this
-            #     f"Event batch of size {len(data[0]['messages'])} has been sent to Humio"
-            # )
+
+            logging.info(
+                f"Event batch of size {len(data[0]['messages'])} has been sent to Humio"
+            )
     except ClientError as ex:
-        raise Exception("Unable to get humio endpoint/ingest_token") from ex
+        raise Exception("Unable to get humio endpoint/ingest_token") from ex # pylint: disable=raise-missing-from
+
 
 def write(
     data: List,
@@ -82,7 +88,8 @@ def write(
     :param endpoint: Select Humio endpoint to write data
     :param token: Humio-generated ingest token
     :param metadata: Optional list of dictionaries for any other information that may be valuable/necessary
-
+    :param chunk_size: Number of events to send per POST request to Humio
+    
     :raises Exception: general exception for raised exceptions from humio functions
     """
     if not isinstance(data, list):
@@ -100,7 +107,7 @@ def write(
     chunks = []
     for i in range(0, len(data), chunk_size):
         chunk = []
-        for event in data[i : i + chunk_size]:  # noqa:
+        for event in data[i: i + chunk_size]:  # noqa:
             chunk.append(json.dumps(event))
         chunks.append([{"messages": chunk}])
     _send_humio(chunks, endpoint, token)

@@ -1,3 +1,6 @@
+"""
+The ssm module provides functionality for interacting with AWS SSM Parameter Store
+"""
 import logging
 from typing import Dict, Optional
 import boto3
@@ -174,4 +177,3 @@ def put_value(
         logging.debug("Auth keys not preset, using default AWS keys")
         ssm = boto3.client("ssm", region_name=region)
         _put(ssm, path, value)
-

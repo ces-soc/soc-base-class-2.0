@@ -38,16 +38,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Set Up Python 3.10
+    - name: Set Up Python 3.9
       uses: actions/setup-python@v4
       with:
-        python-version: "3.10"
+        python-version: "3.9"
     - name: Install dependencies
       run: |
         git config --global credential.helper 'store'
         echo "https://${{secrets.GIT_USERNAME}}:${{secrets.GIT_TOKEN}}@github.com" > ~/.git-credentials
-#         pip install -r requirements.txt
         pip install pylint
+        pip install requests
+        pip install urllib3
+        pip install botocore
     - name: Lint with pylint
       run: |
         # Perform Pylint linting, exclude rules detailed in readthedocs
@@ -99,7 +101,7 @@ jobs:
           --accept-no-return-doc=yes \
           --accept-no-yields-doc=yes \
           --default-docstring-type=sphinx \
-          *.py
+          cessoc/*.py
       
                         
   bandit-linting:
@@ -148,7 +150,10 @@ jobs:
     - name: Install dependencies
       run: |
         pip install pytest
-#         pip install -r requirements.txt
+        pip install requests
+        pip install boto3
+        pip install pika
+        pip install datetime
     - name: Run Unit Tests
       run: |
         # Perform Unit Tests
