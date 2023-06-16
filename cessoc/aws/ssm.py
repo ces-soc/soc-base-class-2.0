@@ -2,6 +2,7 @@
 The ssm module provides functionality for interacting with AWS SSM Parameter Store
 """
 import logging
+import json
 from typing import Dict, Optional
 import boto3
 from botocore.exceptions import ClientError
@@ -12,9 +13,10 @@ def get_value(
     access_key: Optional[str] = None,
     secret_key: Optional[str] = None,
     region: str = "us-west-2",
-) -> str:
+) -> str or dict:
     """
     Gets a single str value from the Parameter Store
+    parameters that are json objects will be parsed into python dictionaries
 
     :param path: Name of the path to the SSM parameter
     :param access_key: AWS Access Key (Override in case default credentials don't have permissions to resource)
@@ -33,12 +35,18 @@ def get_value(
             aws_secret_access_key=secret_key,
             region_name=region,
         )
-        return ssm.get_parameter(Name=path, WithDecryption=True)["Parameter"]["Value"]
+        parameter = ssm.get_parameter(Name=path, WithDecryption=True)["Parameter"]["Value"]
     else:
         # Otherwise use the default available keys
         logging.debug("Auth keys not preset, using default AWS keys")
         ssm = boto3.client("ssm", region_name=region)
-        return ssm.get_parameter(Name=path, WithDecryption=True)["Parameter"]["Value"]
+        parameter = ssm.get_parameter(Name=path, WithDecryption=True)["Parameter"]["Value"]
+    try:
+        json.loads(parameter)
+    except ValueError:
+        return parameter # parameter is not a json
+    else:
+        return json.loads(parameter) # parameter is a json
 
 
 def get_all(
@@ -52,7 +60,8 @@ def get_all(
     Gets dictionary of all the parameters under the given path from the Parameter Store.
     Example of a valid path: /etl-template/endpoints (campus is prepended)
     By default will only get parameters directly under the path, but can be set to recursive to get all parameters recursively.
-
+    Parameters that are json objects will be parsed into python dictionaries.
+    
     :param path: Name of the path to the SSM parameter
     :param recursive: Retrieve parameters from any sub paths
 
@@ -111,6 +120,14 @@ def get_all(
     param_dict: Dict[str, str] = {}
     for parameter in _get(ssm, path):
         param_dict[parameter["Name"]] = parameter["Value"]
+    # try to parse json objects
+    for parameter in param_dict:
+        try:
+            json.loads(param_dict[parameter])
+        except ValueError:
+            pass # parameter is not a json
+        else:
+            param_dict[parameter] = json.loads(param_dict[parameter]) # parameter is a json
     return param_dict
 
 

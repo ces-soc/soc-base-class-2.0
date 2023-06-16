@@ -126,4 +126,4 @@ class TestEDM:
     """Test EDM Base Class"""
 
     def test_edm(self):
-        rabbit.EDM()
+        rabbit.Eventhub()
