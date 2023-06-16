@@ -42,8 +42,6 @@ def _send_humio(
     try:
         if endpoint is None:
             endpoint = ssm.get_value("/byu/secops-humio/config/ingest_api")
-        if not token:
-            raise ValueError("token must be provided")
 
         # Create a HTTP session
         retry_strategy = Retry(
@@ -74,10 +72,10 @@ def _send_humio(
 
 def write(
     data: List,
+    token: str,
     metadata: Optional[dict] = None,
     path: Optional[str] = None,
     endpoint: Optional[str] = None,
-    token: Optional[str] = None,
     chunk_size: Optional[int] = 200,
 ) -> None:
     """
