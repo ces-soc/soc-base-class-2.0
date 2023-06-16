@@ -736,7 +736,7 @@ class Eventhub:
 # FROM ETL SECTION
 
 def publish_message_campus(
-    routing_key: str, body: Dict, service_name: str, campus: Optional[str] = "None", json_credentials: Optional[Dict] = None, endpoint: Optional[str] = None, reply_to: bool = False, timeout: int = 300
+    routing_key: str, body: Dict, service_name: str, campus: Optional[str] = None, json_credentials: Optional[Dict] = None, endpoint: Optional[str] = None, reply_to: bool = False, timeout: int = 300
 ) -> Optional[Dict]:
     """
     Sends a message on the eventhub to this campus exchange on the routing key
@@ -748,7 +748,7 @@ def publish_message_campus(
     :param timeout: The timeout to wait for a response in seconds
     :return: The dict of the reply if requested
     """
-    if campus is "None":
+    if campus is None:
         campus = os.getenv("CAMPUS")
     return publish_message(
         exchange=campus.lower(), 
