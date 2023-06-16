@@ -43,6 +43,7 @@ class HealthCheck:
         # Make the runtime easily readable
         readable_runtime = timedelta(seconds=round(self.end_time - self.start_time)).__str__().split(":")
         readable_runtime = f"{readable_runtime[0]}h {readable_runtime[1]}m {readable_runtime[2]}s"
+        
         # data to send to humio healthcheck
         healthdata = [{
             "start_time": f"{datetime.fromtimestamp(self.start_time, tz=self.timezone)}",
@@ -50,8 +51,11 @@ class HealthCheck:
             "service_name": f"{self.service_name}",
             "data": custom_data,
             "runtime": f"{readable_runtime}",
-            "campus": f"{self.campus}",
             "@timestamp": f"{self.end_time}"
         }]
+        if os.getenv("CAMPUS") is not None:
+            healthdata[0]['campus'] = os.getenv("CAMPUS")
+        if os.getenv("STAGE") is not None:
+            healthdata[0]['env'] = os.getenv("STAGE")
 
         humio.write(data=healthdata, endpoint=endpoint, token=token, path="healthcheck")
