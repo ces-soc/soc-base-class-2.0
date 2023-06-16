@@ -10,6 +10,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from botocore.exceptions import ClientError
+from cessoc.aws import ssm
 
 
 def _send_humio(
@@ -39,8 +40,8 @@ def _send_humio(
     :raises HTTPError: if any POST request to Humio errors
     """
     try:
-        if not endpoint:
-            raise ValueError("endpoint must be provided")
+        if endpoint is None:
+            endpoint = ssm.get_value("/byu/secops-humio/config/ingest_api")
         if not token:
             raise ValueError("token must be provided")
 
@@ -99,7 +100,8 @@ def write(
 
     # Assign path to event
     for obj in data:
-        obj["_path"] = path
+        if path is not None:
+            obj["_path"] = path
         if metadata is not None:
             obj.update(metadata)
 
