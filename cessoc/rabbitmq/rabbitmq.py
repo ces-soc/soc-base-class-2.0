@@ -24,15 +24,14 @@ from cessoc.aws import ssm
 # FROM EDM SECTION
 
 
-class EDM:
-    """EDM Base Class abstracts Pika connections/actions"""
+class Eventhub:
+    """Eventhub Base Class abstracts Pika connections/actions"""
 
     def __init__(
         self,
         prefetch_count: int = 1,
         virtual_host: str = pika.ConnectionParameters.DEFAULT_VIRTUAL_HOST,
         connection_name: Optional[str] = None,
-        file_logging=False,
         heartbeat=10,
     ) -> None:
         self.parameters: Dict = {}
@@ -737,18 +736,20 @@ class EDM:
 # FROM ETL SECTION
 
 def publish_message_campus(
-    campus: str, routing_key: str, body: Dict, service_name: str, json_credentials: Optional[Dict] = None, endpoint: Optional[str] = None, reply_to: bool = False, timeout: int = 300
+    routing_key: str, body: Dict, service_name: str, campus: Optional[str] = None, json_credentials: Optional[Dict] = None, endpoint: Optional[str] = None, reply_to: bool = False, timeout: int = 300
 ) -> Optional[Dict]:
     """
     Sends a message on the eventhub to this campus exchange on the routing key
     Requires access to `/ces/eventhub/secrets/edm/credentials` and `/ces/eventhub/config/mq_endpoint in parameter store
-    :param campus: The campus to send the message to
+    :param campus: (optional) The campus to send the message to
     :param routing_key: The routing key to send the message to
     :param body: The body of the message to send
     :param reply_to: if an reply is expected (blocking until reply is received)
     :param timeout: The timeout to wait for a response in seconds
     :return: The dict of the reply if requested
     """
+    if campus is None:
+        campus = os.getenv("CAMPUS")
     return publish_message(
         exchange=campus.lower(), 
         routing_key=routing_key, 

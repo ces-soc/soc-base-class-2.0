@@ -2,6 +2,7 @@
 The s3 package provides standard s3 functionality for cessoc services.
 """
 import logging
+import os
 from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
@@ -9,8 +10,8 @@ from botocore.exceptions import ClientError
 
 def write(
     key: str,
-    bucket: str,
     body: str,
+    bucket: Optional[str] = None,
     access_key: Optional[str] = None,
     secret_key: Optional[str] = None,
     region_name: Optional[str] = "us-west-2",
@@ -27,6 +28,8 @@ def write(
 
     :raises ClientError: on boto3 python sdk error
     """
+    if bucket is None:
+        bucket = f"ces-soc-etl-{os.getenv('STAGE')}-{os.getenv('CAMPUS')}"
     logging.debug("Putting data to %s in s3 bucket %s", key, bucket)
     if access_key and secret_key:
         client = boto3.client(
@@ -47,7 +50,7 @@ def write(
 
 def read(
     key: str,
-    bucket: str,
+    bucket: Optional[str] = None,
     access_key: Optional[str] = None,
     secret_key: Optional[str] = None,
     region_name: Optional[str] = "us-west-2",
@@ -65,6 +68,8 @@ def read(
 
     :returns: Bucket data as string or as bytes.
     """
+    if bucket is None:
+        bucket = f"ces-soc-etl-{os.getenv('STAGE')}-{os.getenv('CAMPUS')}"
     logging.debug("Accessing %s in s3 bucket %s", key, bucket)
     if access_key and secret_key:
         client = boto3.client(
