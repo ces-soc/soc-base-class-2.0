@@ -41,7 +41,7 @@ class HealthCheck:
         # set end time
         self.end_time = time.time()
         # Make the runtime easily readable
-        readable_runtime = timedelta(seconds = round(self.end_time - self.start_time)).__str__().split(":")
+        readable_runtime = timedelta(seconds=round(self.end_time - self.start_time)).__str__().split(":")
         readable_runtime = f"{readable_runtime[0]}h {readable_runtime[1]}m {readable_runtime[2]}s"
         # data to send to humio healthcheck
         healthdata = [{
