@@ -784,7 +784,7 @@ def publish_message(
     """
     # Create connection
     if not json_credentials:
-        json_credentials = json.loads(ssm.get_value("/ces/eventhub/secrets/edm/credentials"))
+        json_credentials = ssm.get_value("/ces/eventhub/secrets/edm/credentials")
     if not endpoint:
         endpoint = ssm.get_value("/ces/eventhub/config/mq_endpoint")
 
