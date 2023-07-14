@@ -735,38 +735,11 @@ class Eventhub:
 
 # FROM ETL SECTION
 
-def publish_message_campus(
-    routing_key: str, body: Dict, service_name: str, campus: Optional[str] = None, json_credentials: Optional[Dict] = None, endpoint: Optional[str] = None, reply_to: bool = False, timeout: int = 300
-) -> Optional[Dict]:
-    """
-    Sends a message on the eventhub to this campus exchange on the routing key
-    Requires access to `/ces/eventhub/secrets/edm/credentials` and `/ces/eventhub/config/mq_endpoint in parameter store
-    :param campus: (optional) The campus to send the message to
-    :param routing_key: The routing key to send the message to
-    :param body: The body of the message to send
-    :param reply_to: if an reply is expected (blocking until reply is received)
-    :param timeout: The timeout to wait for a response in seconds
-    :return: The dict of the reply if requested
-    """
-    if campus is None:
-        campus = os.getenv("CAMPUS")
-    return publish_message(
-        exchange=campus.lower(), 
-        routing_key=routing_key, 
-        body=body, 
-        service_name=service_name,
-        json_credentials=json_credentials,
-        endpoint=endpoint,
-        reply_to=reply_to, 
-        timeout=timeout, 
-    )
-
-
 def publish_message(
-    exchange: str,
     routing_key: str,
     body: Dict,
     service_name,
+    exchange: Optional[str] = None,
     json_credentials: Optional[Dict] = None,
     endpoint: Optional[str] = None,
     reply_to: bool = False,
@@ -775,13 +748,15 @@ def publish_message(
     """
     Sends a message on the eventhub to the exchange on the routing key
     Requires access to `/ces/eventhub/secrets/edm/credentials` and `/ces/eventhub/config/mq_endpoint in parameter store
-    :param exchange: The exchange to publish to
+    :param exchange: The exchange to publish to. if not set then the campus environment variable will be used
     :param routing_key: The routing key to send the message to
     :param body: The body of the message to send
     :param reply_to: if an reply is expected (blocking until reply is received)
     :param timeout: The timeout to wait for a response in seconds
     :return: The dict of the reply if requested
     """
+    if exchange is None: # if there is no exchange, use the campus environment variable
+        exchange = os.getenv("CAMPUS").lower()
     # Create connection
     if not json_credentials:
         json_credentials = ssm.get_value("/ces/eventhub/secrets/edm/credentials")
