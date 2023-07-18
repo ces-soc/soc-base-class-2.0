@@ -10,6 +10,7 @@ from cessoc import humio
 from cessoc.aws import ssm
 import atexit
 import sys
+import logging
 
 
 class HealthCheck:
@@ -35,14 +36,12 @@ class HealthCheck:
         """
         try: # gets the last uncaught exception see https://docs.python.org/3/library/sys.html#sys.exc_info
             error = str(sys.last_type) + str(sys.last_value)
-            # error = sys.last_traceback
         except AttributeError:
             error = None
         if error is None:
             self.send(status="completed")
         else:
             self.send(status="errored", custom_data={"error": error})
-        print("exiting...")
 
     def send(self, custom_data: Union[str, dict] = "None", endpoint: Optional[str] = None, token: Optional[str] = None, status = "running"):
         """
@@ -80,4 +79,5 @@ class HealthCheck:
         if os.getenv("STAGE") is not None:
             healthdata[0]['env'] = os.getenv("STAGE")
 
+        logging.log("sending healthcheck data to humio")
         humio.write(data=healthdata, endpoint=endpoint, token=token, path="healthcheck")
