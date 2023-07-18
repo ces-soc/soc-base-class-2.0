@@ -43,7 +43,7 @@ class HealthCheck:
         else:
             self.send(status="errored", custom_data={"error": error})
 
-    def send(self, custom_data: Union[str, dict] = "None", endpoint: Optional[str] = None, token: Optional[str] = None, status = "running"):
+    def send(self, custom_data: Union[str, dict] = "None", endpoint: Optional[str] = None, token: Optional[str] = None, status="running"):
         """
         Sends the healthcheck data to humio. This will run automatically when the program exits. This can be called on a long running service to send periodic healthcheck data.
 
