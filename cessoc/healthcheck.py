@@ -27,11 +27,11 @@ class HealthCheck:
         self.service_name = service_name
         self.campus = os.environ["CAMPUS"].lower()
         self.timezone = tzlocal.get_localzone()
-        atexit.register(self.end)
+        atexit.register(self._end)
 
-    def end(self):
+    def _end(self):
         """
-        Sends healthcheckt data to Humio after the service has ended.
+        Sends healthcheckt data to Humio after the service has ended. Or crashed.
         """
         try: # gets the last uncaught exception see https://docs.python.org/3/library/sys.html#sys.exc_info
             error = str(sys.last_type) + str(sys.last_value)
