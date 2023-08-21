@@ -12,7 +12,15 @@ class soc_logging:
         Sets up the root logger so it will properly output data.
         """
         root_logger = logging.getLogger()
-        root_logger.setLevel(logging.INFO)
+        logging_severity_dict = {
+            "info": logging.INFO,
+            "debug": logging.DEBUG,
+            "warning": logging.WARNING,
+        }
+        if os.environ["LOGGING_SEVERITY"] in logging_severity_dict:
+            root_logger.setLevel(logging_severity_dict[os.environ["LOGGING_SEVERITY"]])
+        else:
+            root_logger.setLevel(logging.INFO)
         handler = soc_logging.get_logging_handler(force_json_logging, file_log)
         if len(root_logger.handlers) != 0:
             root_logger.handlers = []
@@ -28,7 +36,7 @@ class soc_logging:
         else:
             # if non-terminal, set json output
             handler.setFormatter(
-                logging.jsonlogger.JsonFormatter(
+                jsonlogger.JsonFormatter(
                     "%(asctime)s %(levelname)s %(lineno)d %(name)s %(funcName)s %(message)s"
                 )
             )
