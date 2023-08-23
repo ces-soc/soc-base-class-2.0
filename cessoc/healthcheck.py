@@ -10,7 +10,7 @@ from cessoc import humio
 from cessoc.aws import ssm
 import atexit
 import sys
-import logging
+from cessoc.logging import cessoc_logging
 
 
 class HealthCheck:
@@ -29,6 +29,7 @@ class HealthCheck:
         self.campus = os.environ["CAMPUS"].lower()
         self.timezone = tzlocal.get_localzone()
         atexit.register(self._end)
+        self._logger = cessoc_logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     def _end(self):
         """
@@ -79,5 +80,5 @@ class HealthCheck:
         if os.getenv("STAGE") is not None:
             healthdata[0]['env'] = os.getenv("STAGE")
 
-        logging.log("sending healthcheck data to humio")
+        self._logger.info("sending healthcheck data to humio")
         humio.write(data=healthdata, endpoint=endpoint, token=token, path="healthcheck")
