@@ -4,7 +4,7 @@ from pythonjsonlogger import jsonlogger
 from logging.handlers import RotatingFileHandler
 import sys
 
-class soc_logging:
+class cessoc_logging:
     logging_setup = False
     logger = None
 
@@ -22,12 +22,12 @@ class soc_logging:
             root_logger.setLevel(logging_severity_dict[os.environ["LOGGING_SEVERITY"]])
         else:
             root_logger.setLevel(logging.INFO)
-        handler = soc_logging.get_logging_handler(force_json_logging, file_log)
+        handler = cessoc_logging.get_logging_handler(force_json_logging, file_log)
         if len(root_logger.handlers) != 0:
             root_logger.handlers = []
         root_logger.addHandler(handler)
         # set log format
-        if soc_logging.isatty() and force_json_logging is False:
+        if cessoc_logging.isatty() and force_json_logging is False:
             # if terminal, set single line output
             handler.setFormatter(
                 logging.Formatter(
@@ -41,7 +41,7 @@ class soc_logging:
                     "%(asctime)s %(levelname)s %(lineno)d %(name)s %(funcName)s %(message)s"
                 )
             )
-        soc_logging.logging_setup = True
+        cessoc_logging.logging_setup = True
 
     def get_logging_handler(force_json_logging, file_log):
         """Gets the corresponding logging handler based on the type configured for the class. Can be a stdout or file logger"""
@@ -70,11 +70,11 @@ class soc_logging:
         This gets a logger with the name specified. If the root logger has not been configured, it will do so.
         This only configures the root logger the first time it is configured.
         """
-        if not soc_logging.logging_setup:
-            soc_logging.set_root_logging(force_json_logging=force_json_logging, file_log=file_log)
-            soc_logging.logger = logging.getLogger("cessoc")
+        if not cessoc_logging.logging_setup:
+            cessoc_logging.set_root_logging(force_json_logging=force_json_logging, file_log=file_log)
+            cessoc_logging.logger = logging.getLogger("cessoc")
         if name == "cessoc":
-            return soc_logging.logger
+            return cessoc_logging.logger
         else:
             return logging.getLogger(name)
         
