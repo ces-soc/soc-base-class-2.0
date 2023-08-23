@@ -7,6 +7,7 @@ import sys
 class soc_logging:
     logging_setup = False
     logger = None
+
     def set_root_logging(force_json_logging=False, file_log=False):
         """
         Sets up the root logger so it will properly output data.
@@ -27,7 +28,7 @@ class soc_logging:
         root_logger.addHandler(handler)
         # set log format
         if soc_logging.isatty() and force_json_logging is False:
-            # if terminal, set color output
+            # if terminal, set single line output
             handler.setFormatter(
                 logging.Formatter(
                     "[%(asctime)s] [%(levelname)-19s] [%(lineno)04d] [%(name)-25s] [%(funcName)-15s] %(message)s"
@@ -41,6 +42,7 @@ class soc_logging:
                 )
             )
         soc_logging.logging_setup = True
+
     def get_logging_handler(force_json_logging, file_log):
         """Gets the corresponding logging handler based on the type configured for the class. Can be a stdout or file logger"""
         if file_log:
@@ -51,6 +53,7 @@ class soc_logging:
         else:
             # set logging to stdout
             return logging.StreamHandler(sys.stdout)
+
     def isatty() -> bool:
         """
         Check if stdout is going to a terminal
@@ -61,7 +64,12 @@ class soc_logging:
         ):
             return True
         return False
+
     def getLogger(name, force_json_logging=False, file_log=False):
+        """
+        This gets a logger with the name specified. If the root logger has not been configured, it will do so.
+        This only configures the root logger the first time it is configured.
+        """
         if not soc_logging.logging_setup:
             soc_logging.set_root_logging(force_json_logging=force_json_logging, file_log=file_log)
             soc_logging.logger = logging.getLogger("cessoc")
