@@ -834,7 +834,7 @@ def publish_message(
                 if (
                     properties.correlation_id == correlation_id
                 ):  # Only accept the correlated reply
-                    self._logger.info(
+                    logger.info(
                         "Reply received with correlation id: %s", correlation_id
                     )
                     channel.basic_ack(method_frame.delivery_tag)

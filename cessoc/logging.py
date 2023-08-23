@@ -4,6 +4,7 @@ from pythonjsonlogger import jsonlogger
 from logging.handlers import RotatingFileHandler
 import sys
 
+
 class cessoc_logging:
     logging_setup = False
     logger = None
@@ -22,12 +23,12 @@ class cessoc_logging:
             root_logger.setLevel(logging_severity_dict[os.environ["LOGGING_SEVERITY"]])
         else:
             root_logger.setLevel(logging.INFO)
-        handler = cessoc_logging.get_logging_handler(force_json_logging, file_log)
+        handler = cessoc_logging.get_logging_handler(file_log)
         if len(root_logger.handlers) != 0:
             root_logger.handlers = []
         root_logger.addHandler(handler)
         # set log format
-        if cessoc_logging.isatty() and force_json_logging is False:
+        if cessoc_logging.isatty() and force_json_logging is False and file_log is False:
             # if terminal, set single line output
             handler.setFormatter(
                 logging.Formatter(
@@ -46,8 +47,6 @@ class cessoc_logging:
     def get_logging_handler(force_json_logging, file_log):
         """Gets the corresponding logging handler based on the type configured for the class. Can be a stdout or file logger"""
         if file_log:
-            # if logging to a file, do so in json
-            force_json_logging = True
             # Create the rotating file handler. Limit the size to 1000000Bytes ~ 1MB .
             return RotatingFileHandler("log.json", maxBytes=1000000, backupCount=2)
         else:
@@ -77,4 +76,3 @@ class cessoc_logging:
             return cessoc_logging.logger
         else:
             return logging.getLogger(name)
-        
