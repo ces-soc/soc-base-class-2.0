@@ -383,7 +383,7 @@ class Eventhub:
             self._reject_message(basic_deliver.delivery_tag)
             return
 
-        if type(queue.bindings[basic_deliver.routing_key]) == dict:
+        if type(queue.bindings[basic_deliver.routing_key]) is dict:
             task = self._thread_pool_executor.submit(
                 self._callback_wrapper, queue.bindings[basic_deliver.routing_key]["function"], basic_deliver, properties, body, queue.bindings[basic_deliver.routing_key]["sends_reply"]
             )
@@ -613,7 +613,7 @@ class Eventhub:
         for value in bindings.values():
             self._logger.debug("Registering on_message callback %s", value)
 
-        if type(exchange) == str:
+        if type(exchange) is str:
             exchanges = [exchange]
         else:
             exchanges = exchange
@@ -623,9 +623,9 @@ class Eventhub:
         if max_priority:
             arguments = QueueArguments(max_priority=max_priority)
         for key in bindings:
-            if type(bindings[key]) == dict:
+            if type(bindings[key]) is dict:
                 pass
-            elif type(bindings[key]) == callable:
+            elif type(bindings[key]) is callable:
                 bindings[key] = {"function": bindings[key], "sends_reply": True}
         self._queue_manager.register_queue(
             Queue(
