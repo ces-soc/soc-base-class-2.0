@@ -64,5 +64,9 @@ class soc_logging:
     def getLogger(name, force_json_logging=False, file_log=False):
         if not soc_logging.logging_setup:
             soc_logging.set_root_logging(force_json_logging=force_json_logging, file_log=file_log)
-            soc_logging.logger = logging.getLogger(name)     
+            soc_logging.logger = logging.getLogger("cessoc")
+        if name == "cessoc":
+            return soc_logging.logger
+        else:
+            return logging.getLogger(name)
         
