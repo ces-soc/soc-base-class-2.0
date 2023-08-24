@@ -1,11 +1,12 @@
 """
 This module is used for logging.
 """
+import sys
 import logging
 import os
-from pythonjsonlogger import jsonlogger
 from logging.handlers import RotatingFileHandler
-import sys
+from pythonjsonlogger import jsonlogger
+
 
 
 class cessoc_logging:
@@ -23,7 +24,7 @@ class cessoc_logging:
             "debug": logging.DEBUG,
             "warning": logging.WARNING,
         }
-        if os.environ["LOGGING_SEVERITY"] in logging_severity_dict:
+        if hasattr(os.environ, "LOGGING_SEVERITY") and os.environ["LOGGING_SEVERITY"] in logging_severity_dict:
             root_logger.setLevel(logging_severity_dict[os.environ["LOGGING_SEVERITY"]])
         else:
             root_logger.setLevel(logging.INFO)
