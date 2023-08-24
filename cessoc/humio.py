@@ -65,7 +65,7 @@ def _send_humio(
             resp.raise_for_status()
 
             logger.info(
-                f"Event batch of size {len(data[0]['messages'])} has been sent to Humio"
+                "Event batch of size %s has been sent to Humio", str(len(data[0]['messages']))
             )
     except ClientError as ex:
         raise Exception("Unable to get humio endpoint/ingest_token") from ex # pylint: disable=raise-missing-from
