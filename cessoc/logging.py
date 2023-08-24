@@ -8,7 +8,6 @@ from logging.handlers import RotatingFileHandler
 from pythonjsonlogger import jsonlogger
 
 
-
 class cessoc_logging:
     """This module is for logging"""
     logging_setup = False
