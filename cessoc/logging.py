@@ -32,7 +32,7 @@ class cessoc_logging:
             root_logger.handlers = []
         root_logger.addHandler(handler)
         # set log format
-        if cessoc_logging._isatty() and force_json_logging is False and file_log is False:
+        if hasattr(os.environ, "LOG_FORMAT") and os.environ["LOG_FORMAT"].lower() == "ansi":
             # if terminal, set single line output
             handler.setFormatter(
                 logging.Formatter(
@@ -55,17 +55,6 @@ class cessoc_logging:
             return RotatingFileHandler("log.json", maxBytes=1000000, backupCount=2)
         # set logging to stdout
         return logging.StreamHandler(sys.stdout)
-
-    def _isatty() -> bool:
-        """
-        Check if stdout is going to a terminal
-        :returns: True or False if current tty is a terminal
-        """
-        if (hasattr(sys.stdout, "isatty") and sys.stdout.isatty()) or (
-            "TERM" in os.environ and os.environ["TERM"] == "ANSI"
-        ):
-            return True
-        return False
 
     def getLogger(name, force_json_logging=False, file_log=False):
         """
