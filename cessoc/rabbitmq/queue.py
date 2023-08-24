@@ -153,7 +153,7 @@ class QueueDefinitionManager:
         :param exchange: new exchange to register
         :raises ValueError: Raised when the provided exchange already exists and has different instance attribute values
         """
-        if type(exchange) == Exchange:
+        if type(exchange) is Exchange:
             exchanges = [exchange]
         else:
             exchanges = exchange
@@ -197,7 +197,7 @@ class QueueDefinitionManager:
 
         # exchange checks
         if exchange_name is not None:
-            if type(exchange_name) == str:
+            if type(exchange_name) is str:
                 exchanges = [exchange_name]
             else:
                 exchanges = exchange_name

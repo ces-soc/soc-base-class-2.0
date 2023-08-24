@@ -4,13 +4,13 @@ This module is used to send data to Humio.
 # TODO add timeout for humio send # pylint: disable=fixme
 
 import json
-import logging
 from typing import List, Optional
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from botocore.exceptions import ClientError
 from cessoc.aws import ssm
+from cessoc.logging import cessoc_logging
 
 
 def _send_humio(
@@ -39,6 +39,7 @@ def _send_humio(
     :raises ValueError: if the endpoint or token is 'None' when healthcheck is False
     :raises HTTPError: if any POST request to Humio errors
     """
+    logger = cessoc_logging.getLogger("cessoc")
     try:
         if endpoint is None:
             endpoint = ssm.get_value("/byu/secops-humio/config/ingest_api")
@@ -63,8 +64,8 @@ def _send_humio(
             )
             resp.raise_for_status()
 
-            logging.info(
-                f"Event batch of size {len(data[0]['messages'])} has been sent to Humio"
+            logger.info(
+                "Event batch of size %s has been sent to Humio", str(len(data[0]['messages']))
             )
     except ClientError as ex:
         raise Exception("Unable to get humio endpoint/ingest_token") from ex # pylint: disable=raise-missing-from
