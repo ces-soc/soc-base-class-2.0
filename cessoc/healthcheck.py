@@ -10,6 +10,7 @@ from typing import Optional, Union
 import tzlocal
 from cessoc import humio
 from cessoc.aws import ssm
+
 from cessoc.logging import cessoc_logging
 
 
@@ -29,12 +30,14 @@ class HealthCheck:
         self.campus = os.environ["CAMPUS"].lower()
         self.timezone = tzlocal.get_localzone()
         atexit.register(self._end)
+
         self._logger = cessoc_logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
     def _end(self):
         """
         Sends healthcheckt data to Humio after the service has ended. Or crashed.
         """
+
         try: # gets the last uncaught exception see https://docs.python.org/3/library/sys.html#sys.exc_info
             error = str(sys.last_type) + str(sys.last_value)
         except AttributeError:

@@ -755,7 +755,9 @@ def publish_message(
     :param timeout: The timeout to wait for a response in seconds
     :return: The dict of the reply if requested
     """
+
     logger = cessoc_logging.getLogger("cessoc")
+
     if exchange is None: # if there is no exchange, use the campus environment variable
         exchange = os.getenv("CAMPUS").lower()
     # Create connection
