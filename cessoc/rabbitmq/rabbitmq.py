@@ -1,4 +1,3 @@
-import logging
 import ssl
 import functools
 import json
@@ -20,6 +19,7 @@ from pika.frame import Method
 from cessoc.rabbitmq.queue import Queue, QueueDefinitionManager, QueueArguments
 from cessoc.rabbitmq.exchange import Exchange, ExchangeType
 from cessoc.aws import ssm
+from cessoc.logging import cessoc_logging
 
 # FROM EDM SECTION
 
@@ -37,7 +37,7 @@ class Eventhub:
         self.parameters: Dict = {}
 
         # This line should come after the config manager is intialized because the config_manager configures the root logger
-        self._logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self._logger = cessoc_logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
         # how many messages and threads this service will process at once
         self._prefetch_count = prefetch_count
@@ -111,7 +111,7 @@ class Eventhub:
             client_properties={"connection_name": self.connection_name},
         )
 
-        logging.info("Connecting to %s", parameters.host)
+        self._logger.info("Connecting to %s", parameters.host)
         return pika.SelectConnection(
             parameters=parameters,
             on_open_callback=self._on_connection_open,
@@ -123,31 +123,31 @@ class Eventhub:
         """Cleanly close the connection to the MQ."""
         self._closing = True
         if self._connection.is_closing or self._connection.is_closed:
-            logging.info("Connection is closing or already closed")
+            self._logger.info("Connection is closing or already closed")
         else:
-            logging.info("Closing connection")
+            self._logger.info("Closing connection")
             self._connection.close()
 
     def _on_connection_open(self, _unused_connection: Connection) -> None:
         """Called when a new connection to the MQ has been established. Starts opening a channel."""
-        logging.info("Connection opened")
+        self._logger.info("Connection opened")
         self._open_channel()
 
     def _on_connection_open_error(self, _unused_connection: Connection, err: Exception) -> None:
         """Called when a connection cannot be established to the MQ. Stops the ioloop."""
-        logging.error("Connection open failed. Stopping execution.")
-        logging.error(err)
+        self._logger.error("Connection open failed. Stopping execution.")
+        self._logger.error(err)
         self.stop()
 
     def _on_connection_closed(self, _unused_connection: Connection, reason: Exception) -> None:
         """Called when an established connection to the MQ has been closed cleanly."""
-        logging.warning("Connection closed: %s", reason)
+        self._logger.warning("Connection closed: %s", reason)
         self._channel = None
         self._connection.ioloop.stop()
 
     def _open_channel(self) -> None:
         """Opens a new channel to the MQ. Starts exchange setup."""
-        logging.debug("Creating a new channel")
+        self._logger.debug("Creating a new channel")
         self._connection.channel(on_open_callback=self._on_channel_open)
 
     def _on_channel_open(self, channel: Channel) -> None:
@@ -155,7 +155,7 @@ class Eventhub:
         Called when a channel has been successfully opened to the MQ. Calls the after
         channel open callbacks and starts queue setup.
         """
-        logging.info("Channel opened")
+        self._logger.info("Channel opened")
         self._channel = channel
         self._channel.add_on_close_callback(self._on_channel_closed)
         self._channel.add_on_cancel_callback(self._on_consumer_cancelled)
@@ -176,7 +176,7 @@ class Eventhub:
 
     def _on_channel_closed(self, channel: Channel, reason: Exception):
         """Called when a channel has been cleanly closed."""
-        logging.warning("Channel %i was closed: %s", channel, reason)
+        self._logger.warning("Channel %i was closed: %s", channel, reason)
         for cb in self._on_channel_closed_callbacks:
             cb(reason)
         self._close_connection()
@@ -187,13 +187,13 @@ class Eventhub:
 
     def _on_consumer_cancelled(self, method_frame: Method) -> None:
         """Called when a consumer has been canceled either by the MQ or this service."""
-        logging.info("Consumer was cancelled remotely: %r", method_frame)
+        self._logger.info("Consumer was cancelled remotely: %r", method_frame)
 
     def _on_message_reject_cb(
         self, channel: Channel, method: Basic.Return, properties: BasicProperties, body: bytes
     ) -> None:
         """Called when a basic.reject has been issued for a message that this service sent."""
-        logging.error(
+        self._logger.error(
             "message was rejected: '%s'. Exchange: '%s', Route: '%s', 'CorrelationID: '%s'",
             method.reply_text,
             method.exchange,
@@ -207,7 +207,7 @@ class Eventhub:
 
         :param task_check: Seconds to wait before checking if all tasks have finished
         """
-        logging.info("Stopping")
+        self._logger.info("Stopping")
 
         self._closing = True
         # stop consuming so we don't receive any new messages
@@ -215,7 +215,7 @@ class Eventhub:
         self._thread_pool_executor.shutdown(wait=False)
         # wait until all threads have returned
         if len(self._tasks) != 0:
-            logging.info("Pending tasks to complete before shutdown: %s", len(self._tasks))
+            self._logger.info("Pending tasks to complete before shutdown: %s", len(self._tasks))
             # call in 2 seconds, gives the threads time to ack or reply to messages they've already received
             self._connection.ioloop.call_later(task_check, self.stop)
         else:
@@ -226,7 +226,7 @@ class Eventhub:
         """Called once all messages have been properly processed"""
         self._close_connection()
         self._connection.ioloop.stop()
-        logging.info("Stopped")
+        self._logger.info("Stopped")
 
     def _stop_consuming_all(self) -> None:
         """Cancels all consumers."""
@@ -238,7 +238,7 @@ class Eventhub:
 
     def _stop_consuming(self, queue: Queue) -> None:
         """Cancels the consumer tag"""
-        logging.debug("Canceling consumer %s", queue.consumer_tag)
+        self._logger.debug("Canceling consumer %s", queue.consumer_tag)
         cb = functools.partial(self._on_cancelok, queue=queue)
         self._channel.basic_cancel(queue.consumer_tag, cb)
 
@@ -249,12 +249,12 @@ class Eventhub:
 
     def _on_cancelok(self, _unused_frame: Method, queue: Queue) -> None:
         """Called when a consumer is canceld."""
-        logging.info("RabbitMQ acknowledged the cancellation of the consumer: %s", queue.consumer_tag)
+        self._logger.info("RabbitMQ acknowledged the cancellation of the consumer: %s", queue.consumer_tag)
         queue.consumer_tag = None
 
     def _setup_exchange(self, exchange: Exchange) -> None:
         """Set up an exchange."""
-        logging.info("Declaring exchange: %s", exchange.name)
+        self._logger.info("Declaring exchange: %s", exchange.name)
         cb = functools.partial(self._on_exchange_declareok, exchange=exchange)
         self._channel.exchange_declare(
             exchange=exchange.name,
@@ -267,13 +267,13 @@ class Eventhub:
 
     def _on_exchange_declareok(self, _unused_frame: Method, exchange: Exchange) -> None:
         """Called when an exchanges is successfully declared."""
-        logging.debug("Exchange declared: %s", exchange.name)
+        self._logger.debug("Exchange declared: %s", exchange.name)
         for queue in self._queue_manager.queue_bindings[exchange.name]:
             self._setup_queue(queue, exchange)
 
     def _setup_queue(self, queue: Queue, exchange: Optional[Exchange] = None) -> None:
         """Set up a queue."""
-        logging.info("Declaring queue %s", queue.name)
+        self._logger.info("Declaring queue %s", queue.name)
         cb = functools.partial(self._on_queue_declare_ok, queue=queue, exchange=exchange)
         self._channel.queue_declare(
             queue=queue.name,
@@ -298,17 +298,17 @@ class Eventhub:
                     "Cannot bind queue '{}' to exchange '{}' with no routing keys".format(queue.name, exchange.name)
                 )
             for key in queue.bindings:
-                logging.info("Binding queue %s to exchange %s with routing key %s", queue.name, exchange.name, key)
+                self._logger.info("Binding queue %s to exchange %s with routing key %s", queue.name, exchange.name, key)
                 cb = functools.partial(self._on_bindok, queue=queue, routing_key=key)
                 self._channel.queue_bind(queue.name, exchange.name, routing_key=key, callback=cb)
         else:
             # bind to default exchange
-            logging.info("Queue %s bound to the default exchange using the name as the routing key", queue.name)
+            self._logger.info("Queue %s bound to the default exchange using the name as the routing key", queue.name)
         self._set_qos(queue)
 
     def _on_bindok(self, _unused_frame: Method, queue, routing_key: str) -> None:
         """Called when a queue has been successfully bound to an exchange"""
-        logging.debug("Queue bound '%s' with routing key '%s'", queue.name, routing_key)
+        self._logger.debug("Queue bound '%s' with routing key '%s'", queue.name, routing_key)
 
     def _set_qos(self, queue: Queue) -> None:
         """Sets the prefect count for the queue"""
@@ -317,15 +317,15 @@ class Eventhub:
 
     def _on_basic_qos_ok(self, _unused_frame: Method, queue: Queue) -> None:
         """Called when the prefect count for a queue has been successfully set. Starting consuming of the queue."""
-        logging.debug("QOS set to: %d", self._prefetch_count)
+        self._logger.debug("QOS set to: %d", self._prefetch_count)
         self._start_consuming(queue)
 
     def _start_consuming(self, queue: Queue) -> None:
         """Starts consuming the queue."""
-        logging.info("Starting consumer for queue %s", queue.name)
+        self._logger.info("Starting consumer for queue %s", queue.name)
         cb = functools.partial(self._on_message, queue=queue)
         queue.consumer_tag = self._channel.basic_consume(queue.name, cb)
-        logging.debug("Started consumer %s with tag %s", queue.name, queue.consumer_tag)
+        self._logger.debug("Started consumer %s with tag %s", queue.name, queue.consumer_tag)
 
         if self._is_ready():
             self._on_ready()
@@ -352,16 +352,16 @@ class Eventhub:
         queue: Queue,
     ) -> None:
         """Called when a new message is received. Checks the content encoding and content type. Starts a new thread to process the message."""
-        logging.debug("Received message # %s from %s", basic_deliver.delivery_tag, properties.app_id)
+        self._logger.debug("Received message # %s from %s", basic_deliver.delivery_tag, properties.app_id)
 
         if properties.content_encoding != "utf-8":
-            logging.error(
+            self._logger.error(
                 "Rejecting message. Content encoding type must be 'utf-8' not '%s'", properties.content_encoding
             )
             self._reject_message(basic_deliver.delivery_tag)
             return
         if properties.content_type != "application/json":
-            logging.error(
+            self._logger.error(
                 "Rejecting message. Content type must be 'application/json' not '%s'", properties.content_type
             )
             self._reject_message(basic_deliver.delivery_tag)
@@ -370,20 +370,20 @@ class Eventhub:
         # check if the queue has bindings
         if queue.bindings is None:
             # this code should not be reachable since a check should be done before consuming from a queue with no bindings
-            logging.error("Rejecting message. Queue %s has no bindings specified", queue.name)
+            self._logger.error("Rejecting message. Queue %s has no bindings specified", queue.name)
             self._reject_message(basic_deliver.delivery_tag)
             return
 
         # ensure the queue has bindings for the routing key
         if basic_deliver.routing_key not in queue.bindings:
-            logging.error(
+            self._logger.error(
                 "Rejecting message. Received message on routing key '%s' but no binding was specified",
                 basic_deliver.routing_key,
             )
             self._reject_message(basic_deliver.delivery_tag)
             return
 
-        if type(queue.bindings[basic_deliver.routing_key]) == dict:
+        if type(queue.bindings[basic_deliver.routing_key]) is dict:
             task = self._thread_pool_executor.submit(
                 self._callback_wrapper, queue.bindings[basic_deliver.routing_key]["function"], basic_deliver, properties, body, queue.bindings[basic_deliver.routing_key]["sends_reply"]
             )
@@ -397,7 +397,7 @@ class Eventhub:
 
     def _notify_thread_done(self, task) -> None:
         """Called when a thread finishes"""
-        logging.info("Thread finished")
+        self._logger.info("Thread finished")
         self._tasks.remove(task)
 
     def _callback_wrapper(
@@ -411,7 +411,7 @@ class Eventhub:
             response = cb(properties, json.loads(body.decode("utf-8"), strict=False))
 
             end_time = time.process_time()
-            logging.debug("Processing event took %s seconds", (end_time - start_time))
+            self._logger.debug("Processing event took %s seconds", (end_time - start_time))
 
             if response and properties.reply_to:
                 reply_to_headers = None
@@ -427,52 +427,52 @@ class Eventhub:
                 )
                 self._connection.ioloop.add_callback_threadsafe(reply_cb)
             elif response and not properties.reply_to:
-                logging.warning("Callback returned data but no reply to was requested")
+                self._logger.warning("Callback returned data but no reply to was requested")
             elif not response and reply_expected and properties.reply_to:
-                logging.error("Reply-to was requested but no data was returned from the callback")
+                self._logger.error("Reply-to was requested but no data was returned from the callback")
 
             cb = functools.partial(self._acknowledge_message, delivery_tag=basic_deliver.delivery_tag)
             self._connection.ioloop.add_callback_threadsafe(cb)
         except UnicodeDecodeError as ex:
-            logging.error("Could not decode message: %s", ex)
+            self._logger.error("Could not decode message: %s", ex)
             cb = functools.partial(self._reject_message, delivery_tag=basic_deliver.delivery_tag)
             self._connection.ioloop.add_callback_threadsafe(cb)
         except json.JSONDecodeError as ex:
-            logging.error("Could not load message json: %s", ex)
+            self._logger.error("Could not load message json: %s", ex)
             cb = functools.partial(self._reject_message, delivery_tag=basic_deliver.delivery_tag)
             self._connection.ioloop.add_callback_threadsafe(cb)
         except Exception as ex:  # pylint: disable=broad-except
-            logging.error("Error handling callback: %s", ex)
-            logging.error("%s", traceback.format_exc())
+            self._logger.error("Error handling callback: %s", ex)
+            self._logger.error("%s", traceback.format_exc())
             cb = functools.partial(self._reject_message, delivery_tag=basic_deliver.delivery_tag)
             self._connection.ioloop.add_callback_threadsafe(cb)
 
     def _on_reply_to(self, properties: BasicProperties, body: Union[Dict, List]) -> None:
         """Called when the message is a reply to. Calls the reply to callback based on the Reply-To-Callback header."""
-        logging.debug("Processing reply-to")
+        self._logger.debug("Processing reply-to")
         if properties.headers is None or "Reply-To-Callback" not in properties.headers:
-            logging.error("Reply-to is missing the 'Reply-To-Callback' header. Cannot process reply-to")
+            self._logger.error("Reply-to is missing the 'Reply-To-Callback' header. Cannot process reply-to")
             return None
 
         if properties.headers["Reply-To-Callback"] not in self._reply_to_callbacks:
-            logging.error(
+            self._logger.error(
                 "This service has no method '%s' registered as a reply_to_callback. Cannot process reply-to",
                 properties.headers["Reply-To-Callback"],
             )
             return None
 
         callback_name = properties.headers["Reply-To-Callback"]
-        logging.debug("Calling %s to process reply-to", callback_name)
+        self._logger.debug("Calling %s to process reply-to", callback_name)
         return self._reply_to_callbacks[callback_name](properties, body)
 
     def _reject_message(self, delivery_tag: str) -> None:
         """Rejects and dequeues the message."""
-        logging.debug("Rejecting message %s", delivery_tag)
+        self._logger.debug("Rejecting message %s", delivery_tag)
         self._channel.basic_reject(delivery_tag, requeue=False)
 
     def _acknowledge_message(self, delivery_tag: str) -> None:
         """Acknowledges the message."""
-        logging.debug("Acknowledging message %s", delivery_tag)
+        self._logger.debug("Acknowledging message %s", delivery_tag)
         self._channel.basic_ack(delivery_tag)
 
     def run(self, mq_endpoint: str, username: str = "guest", password: str = "guest") -> None:  # nosec
@@ -520,7 +520,7 @@ class Eventhub:
         :raises ValueError: Raised when reply_to_callback is not set and reply_to is True
         """
         if self._channel is None or not self._channel.is_open:
-            logging.error("Channel must be open to publish messages")
+            self._logger.error("Channel must be open to publish messages")
             return
 
         if not correlation_id:
@@ -564,14 +564,14 @@ class Eventhub:
 
         try:
             self._channel.basic_publish(exchange, routing_key, json.dumps(message), properties, mandatory=mandatory)
-            logging.info(
+            self._logger.info(
                 "Published message to exchange '%s' with routing key '%s' and correlation id '%s'",
                 exchange,
                 routing_key,
                 correlation_id,
             )
         except pika.exceptions.UnroutableError:
-            logging.error("Message was unroutable")
+            self._logger.error("Message was unroutable")
 
     def register_on_message_callback_campus(
         self, queue_name: str, campus_name, bindings: Dict[str, Tuple[Dict, Callable]], max_priority: Optional[int] = None, 
@@ -611,9 +611,9 @@ class Eventhub:
         :param max_priority: Max priority of the queue. Can be 1-256. https://www.rabbitmq.com/priority.html
         """
         for value in bindings.values():
-            logging.debug("Registering on_message callback %s", value)
+            self._logger.debug("Registering on_message callback %s", value)
 
-        if type(exchange) == str:
+        if type(exchange) is str:
             exchanges = [exchange]
         else:
             exchanges = exchange
@@ -623,9 +623,9 @@ class Eventhub:
         if max_priority:
             arguments = QueueArguments(max_priority=max_priority)
         for key in bindings:
-            if type(bindings[key]) == dict:
+            if type(bindings[key]) is dict:
                 pass
-            elif type(bindings[key]) == callable:
+            elif type(bindings[key]) is callable:
                 bindings[key] = {"function": bindings[key], "sends_reply": True}
         self._queue_manager.register_queue(
             Queue(
@@ -645,7 +645,7 @@ class Eventhub:
 
         :param callback: Function to call when a reply-to message is received
         """
-        logging.debug("Registering on reply_to callback: %s", callback.__qualname__)
+        self._logger.debug("Registering on reply_to callback: %s", callback.__qualname__)
         self._reply_to_callbacks[callback.__qualname__] = callback
 
         # routing key is the same as the queue name
@@ -694,12 +694,12 @@ class Eventhub:
 
         :param callback: Function to call after this service opens a channel to the MQ
         """
-        logging.debug("Registering after_channel_open callback: %s", callback)
+        self._logger.debug("Registering after_channel_open callback: %s", callback)
         self._after_channel_open_callbacks.append(callback)
 
     def _after_channel_open(self) -> None:
         """Called when the channel has been opened."""
-        logging.debug("Calling after_channel_open callbacks. %s total", len(self._after_channel_open_callbacks))
+        self._logger.debug("Calling after_channel_open callbacks. %s total", len(self._after_channel_open_callbacks))
         for cb in self._after_channel_open_callbacks:
             cb()
 
@@ -710,13 +710,13 @@ class Eventhub:
 
         :param callback: Function to call after this service is ready to receive messages
         """
-        logging.debug("Registering on_ready callback: %s", callback)
+        self._logger.debug("Registering on_ready callback: %s", callback)
         self._on_ready_callbacks.append(callback)
 
     def _on_ready(self) -> None:
         """Called when all queues are registered and the service is ready to receive messages"""
-        logging.info("EDM ready")
-        logging.debug("Calling on_ready callbacks. %s total", len(self._on_ready_callbacks))
+        self._logger.info("EDM ready")
+        self._logger.debug("Calling on_ready callbacks. %s total", len(self._on_ready_callbacks))
         for cb in self._on_ready_callbacks:
             cb()
 
@@ -724,12 +724,12 @@ class Eventhub:
         """Captures interupt signals"""
         if not self._closing:
             # finish processing any current messages
-            logging.info("Got KeyboardInterrupt. Closing gracefully.")
-            logging.info("Send signal again for hard shutdown.")
+            self._logger.info("Got KeyboardInterrupt. Closing gracefully.")
+            self._logger.info("Send signal again for hard shutdown.")
             self.stop()
         else:
             # close now, interupting any currently processing messages
-            logging.info("Hard shutdown!")
+            self._logger.info("Hard shutdown!")
             os._exit(0)  # pylint: disable=protected-access
 
 
@@ -755,6 +755,9 @@ def publish_message(
     :param timeout: The timeout to wait for a response in seconds
     :return: The dict of the reply if requested
     """
+
+    logger = cessoc_logging.getLogger("cessoc")
+
     if exchange is None: # if there is no exchange, use the campus environment variable
         exchange = os.getenv("CAMPUS").lower()
     # Create connection
@@ -813,14 +816,14 @@ def publish_message(
         channel.basic_publish(
             exchange, routing_key, json.dumps(body), properties, mandatory=True
         )
-        logging.info(
+        logger.info(
             "Published message to exchange '%s' with routing key '%s' and correlation id '%s'",
             exchange,
             routing_key,
             correlation_id,
         )
     except pika.exceptions.UnroutableError:
-        logging.error("Message was unroutable")
+        logger.error("Message was unroutable")
 
     # Consume all messages on the response queue
     if reply_to and reply_to_queue is not None:
@@ -833,7 +836,7 @@ def publish_message(
                 if (
                     properties.correlation_id == correlation_id
                 ):  # Only accept the correlated reply
-                    logging.info(
+                    logger.info(
                         "Reply received with correlation id: %s", correlation_id
                     )
                     channel.basic_ack(method_frame.delivery_tag)
@@ -842,11 +845,11 @@ def publish_message(
                     connection.close()
                     return json.loads(reply_body)
                 else:  # Reject non-correlated messages
-                    logging.debug("Rejecting message")
+                    logger.debug("Rejecting message")
                     channel.basic_nack(method_frame.delivery_tag)
                 channel.cancel()
                 break
-        logging.error(
+        logger.error(
             "Message timed out before a reply was received, correlation id: %s",
             correlation_id,
         )

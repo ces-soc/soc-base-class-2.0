@@ -1,11 +1,11 @@
 """
 The s3 package provides standard s3 functionality for cessoc services.
 """
-import logging
 import os
 from typing import Optional
 import boto3
 from botocore.exceptions import ClientError
+from cessoc.logging import cessoc_logging
 
 
 def write(
@@ -28,9 +28,10 @@ def write(
 
     :raises ClientError: on boto3 python sdk error
     """
+    logger = cessoc_logging.getLogger("cessoc")
     if bucket is None:
         bucket = f"ces-soc-etl-{os.getenv('STAGE')}-{os.getenv('CAMPUS')}"
-    logging.debug("Putting data to %s in s3 bucket %s", key, bucket)
+    logger.debug("Putting data to %s in s3 bucket %s", key, bucket)
     if access_key and secret_key:
         client = boto3.client(
             "s3",
@@ -42,9 +43,9 @@ def write(
         client = boto3.client("s3", region_name=region_name)
     try:
         response = client.put_object(Key=key, Bucket=bucket, Body=body)
-        logging.debug(response)
+        logger.debug(response)
     except ClientError as ex:
-        logging.error("Could not put to s3: %s", ex)
+        logger.error("Could not put to s3: %s", ex)
         raise ex
 
 
@@ -68,9 +69,10 @@ def read(
 
     :returns: Bucket data as string or as bytes.
     """
+    logger = cessoc_logging.getLogger("cessoc")
     if bucket is None:
         bucket = f"ces-soc-etl-{os.getenv('STAGE')}-{os.getenv('CAMPUS')}"
-    logging.debug("Accessing %s in s3 bucket %s", key, bucket)
+    logger.debug("Accessing %s in s3 bucket %s", key, bucket)
     if access_key and secret_key:
         client = boto3.client(
             "s3",
@@ -82,9 +84,9 @@ def read(
         client = boto3.client("s3", region_name=region_name)
     try:
         response = client.get_object(Key=key, Bucket=bucket)
-        logging.debug(response)
+        logger.debug(response)
     except ClientError as ex:
-        logging.error("Could not get from S3: %s", ex)
+        logger.error("Could not get from S3: %s", ex)
         raise ex
     else:
         return response["Body"].read().decode("utf-8")

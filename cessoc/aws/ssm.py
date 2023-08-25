@@ -1,11 +1,11 @@
 """
 The ssm module provides functionality for interacting with AWS SSM Parameter Store
 """
-import logging
 import json
 from typing import Dict, Optional
 import boto3
 from botocore.exceptions import ClientError
+from cessoc.logging import cessoc_logging
 
 
 def get_value(
@@ -25,10 +25,10 @@ def get_value(
 
     :returns: The specified str
     """
-
+    logger = cessoc_logging.getLogger("cessoc")
     if access_key and secret_key:
         # For cases in which SSM parameters are in a different account
-        logging.debug("AWS Auth keys present in get_value signature")
+        logger.debug("AWS Auth keys present in get_value signature")
         ssm = boto3.client(
             "ssm",
             aws_access_key_id=access_key,
@@ -38,7 +38,7 @@ def get_value(
         parameter = ssm.get_parameter(Name=path, WithDecryption=True)["Parameter"]["Value"]
     else:
         # Otherwise use the default available keys
-        logging.debug("Auth keys not preset, using default AWS keys")
+        logger.debug("Auth keys not preset, using default AWS keys")
         ssm = boto3.client("ssm", region_name=region)
         parameter = ssm.get_parameter(Name=path, WithDecryption=True)["Parameter"]["Value"]
     try:
@@ -67,6 +67,7 @@ def get_all(
 
     :returns: A dict of all parameters and their value under the path
     """
+    logger = cessoc_logging.getLogger("cessoc")
 
     def _get(ssm: boto3.client, path: str) -> list:
         """
@@ -106,7 +107,7 @@ def get_all(
 
     if access_key and secret_key:
         # For cases in which SSM parameters are in a different account
-        logging.debug("AWS Auth keys present in get_value signature")
+        logger.debug("AWS Auth keys present in get_value signature")
         ssm = boto3.client(
             "ssm",
             aws_access_key_id=access_key,
@@ -115,7 +116,7 @@ def get_all(
         )
     else:
         # Otherwise use the default available keys
-        logging.debug("Auth keys not preset, using default AWS keys")
+        logger.debug("Auth keys not preset, using default AWS keys")
         ssm = boto3.client("ssm", region_name=region)
     param_dict: Dict[str, str] = {}
     for parameter in _get(ssm, path):
@@ -151,6 +152,7 @@ def put_value(
 
     :raises Exception:
     """
+    logger = cessoc_logging.getLogger("cessoc")
 
     def _put(ssm: boto3.client, path: str, value: str) -> None:
         """
@@ -173,7 +175,7 @@ def put_value(
             )
         except ClientError as ex:
             if ex.response["Error"]["Code"] == "ParameterAlreadyExists":
-                logging.warning(
+                logger.warning(
                     "put_value item not written. Remove overwrite=False to overwrite existing value"
                 )
             else:
@@ -181,7 +183,7 @@ def put_value(
 
     if access_key and secret_key:
         # For cases in which SSM parameters are in a different account
-        logging.debug("AWS Auth keys present in put_value signature")
+        logger.debug("AWS Auth keys present in put_value signature")
         ssm = boto3.client(
             "ssm",
             aws_access_key_id=access_key,
@@ -191,6 +193,6 @@ def put_value(
         _put(ssm, path, value)
     else:
         # Otherwise use the default available keys
-        logging.debug("Auth keys not preset, using default AWS keys")
+        logger.debug("Auth keys not preset, using default AWS keys")
         ssm = boto3.client("ssm", region_name=region)
         _put(ssm, path, value)
