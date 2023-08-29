@@ -7,7 +7,9 @@ from cessoc.aws import ssm
 
 
 class Postgresql:
-    def __init__(self, database, user, password, host: Optional[str] = ssm.get_value('/ces/data_store/rds_host'), port: Optional[int] = 5432):
+    def __init__(self, database, user, password, host: Optional[str] = None, port: Optional[int] = 5432):
+        if host is None: # Putting the ssm.get_value in the function def fails unit tests because it tries to pull the data from SSM on import and can't because it can't log in to AWS.
+            host = ssm.get_value('/ces/data_store/rds_host')
         self.connection = pg.connect(
             host=host,
             database=database,
