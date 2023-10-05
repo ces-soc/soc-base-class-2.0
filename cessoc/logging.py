@@ -23,7 +23,7 @@ class cessoc_logging:
             "debug": logging.DEBUG,
             "warning": logging.WARNING,
         }
-        if hasattr(os.environ, "LOGGING_SEVERITY") and os.environ["LOGGING_SEVERITY"] in logging_severity_dict:
+        if "LOGGING_SEVERITY" in os.environ and os.environ["LOGGING_SEVERITY"] in logging_severity_dict:
             root_logger.setLevel(logging_severity_dict[os.environ["LOGGING_SEVERITY"]])
         else:
             root_logger.setLevel(logging.INFO)
@@ -32,7 +32,7 @@ class cessoc_logging:
             root_logger.handlers = []
         root_logger.addHandler(handler)
         # set log format
-        if hasattr(os.environ, "LOG_FORMAT") and os.environ["LOG_FORMAT"].lower() == "ansi":
+        if "LOGGING_FORMAT" in os.environ and os.environ["LOGGING_FORMAT"].lower() == "ansi":
             # if terminal, set single line output
             handler.setFormatter(
                 logging.Formatter(
