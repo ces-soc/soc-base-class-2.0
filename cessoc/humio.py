@@ -47,7 +47,7 @@ def _send_humio(
                 campus = os.environ["CAMPUS"]
             except KeyError as ex:
                 raise KeyError("CAMPUS environment variable is undefined") from ex
-            if "ON_PREM_DEPLOY" in os.environ and os.enivorn["ON_PREM_DEPLOY"] == "true":
+            if "ON_PREM_DEPLOY" in os.environ and os.environ["ON_PREM_DEPLOY"] == "true":
                 logger.debug("Accessing on-prem ingest API")
                 endpoint = ssm.get_value("/" + campus + "/secops-humio/config/ingest_api-on_prem")
             else:
