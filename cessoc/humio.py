@@ -3,6 +3,7 @@ This module is used to send data to Humio.
 """
 # TODO add timeout for humio send # pylint: disable=fixme
 
+import os
 import json
 from typing import List, Optional
 import requests
@@ -42,7 +43,15 @@ def _send_humio(
     logger = cessoc_logging.getLogger("cessoc")
     try:
         if endpoint is None:
-            endpoint = ssm.get_value("/byu/secops-humio/config/ingest_api")
+            try:
+                campus = os.environ["CAMPUS"]
+            except KeyError as ex:
+                raise KeyError("CAMPUS environment variable is undefined") from ex
+            if "ON_PREM_DEPLOY" in os.environ and os.enivorn["ON_PREM_DEPLOY"] == "true":
+                logger.debug("Accessing on-prem ingest API")
+                endpoint = ssm.get_value("/" + campus + "/secops-humio/config/ingest_api-on_prem")
+            else:
+                endpoint = ssm.get_value("/" + campus + "/secops-humio/config/ingest_api")
 
         # Create a HTTP session
         retry_strategy = Retry(
@@ -61,6 +70,7 @@ def _send_humio(
                 endpoint,
                 json=data,
                 headers={"Authorization": "Bearer " + f"{token}"},
+                timeout=120
             )
             resp.raise_for_status()
 
