@@ -6,6 +6,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 from pythonjsonlogger import jsonlogger
+from typing import List, Tuple
 
 
 class cessoc_logging:
@@ -67,3 +68,13 @@ class cessoc_logging:
         if name == "cessoc":
             return cessoc_logging.logger
         return logging.getLogger(name)
+
+    def setLogger(logger_levels: List[Tuple[str,int]]):
+        """Allows setting the log level of other loggers. This can be useful if an SDK is noisy."""
+        available_loggers = logging.root.manager.loggerDict.keys()
+
+        for name,level in logger_levels:
+            if name in available_loggers:
+                logging.getLogger(name).setLevel(level)
+            else:
+                raise ValueError(f"Logger {name} does not exist")
