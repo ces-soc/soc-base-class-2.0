@@ -5,8 +5,8 @@ import sys
 import logging
 import os
 from logging.handlers import RotatingFileHandler
-from pythonjsonlogger import jsonlogger
 from typing import List, Tuple
+from pythonjsonlogger import jsonlogger
 
 
 class cessoc_logging:
@@ -14,7 +14,7 @@ class cessoc_logging:
     logging_setup = False
     logger = None
 
-    def _set_root_logging(force_json_logging=False, file_log=False):
+    def _set_root_logging(self, force_json_logging=False, file_log=False):
         """
         Sets up the root logger so it will properly output data.
         """
@@ -49,7 +49,7 @@ class cessoc_logging:
             )
         cessoc_logging.logging_setup = True
 
-    def _get_logging_handler(file_log):
+    def _get_logging_handler(self, file_log):
         """Gets the corresponding logging handler based on the type configured for the class. Can be a stdout or file logger"""
         if file_log:
             # Create the rotating file handler. Limit the size to 1000000Bytes ~ 1MB .
@@ -57,7 +57,7 @@ class cessoc_logging:
         # set logging to stdout
         return logging.StreamHandler(sys.stdout)
 
-    def getLogger(name, force_json_logging=False, file_log=False):
+    def getLogger(self, name, force_json_logging=False, file_log=False):
         """
         This gets a logger with the name specified. If the root logger has not been configured, it will do so.
         This only configures the root logger the first time it is configured.
@@ -69,11 +69,11 @@ class cessoc_logging:
             return cessoc_logging.logger
         return logging.getLogger(name)
 
-    def setLogger(logger_levels: List[Tuple[str,int]]):
+    def setLogger(self, logger_levels: List[Tuple[str, int]]):
         """Allows setting the log level of other loggers. This can be useful if an SDK is noisy."""
         available_loggers = logging.root.manager.loggerDict.keys()
 
-        for name,level in logger_levels:
+        for name, level in logger_levels:
             if name in available_loggers:
                 logging.getLogger(name).setLevel(level)
             else:
