@@ -33,7 +33,7 @@ class cessoc_logging:
             root_logger.handlers = []
         root_logger.addHandler(handler)
         # set log format
-        if "LOGGING_FORMAT" in os.environ and os.environ["LOGGING_FORMAT"].lower() == "ansi" and force_json_logging == False: # pylint: disable=E0213
+        if "LOGGING_FORMAT" in os.environ and os.environ["LOGGING_FORMAT"].lower() == "ansi" and force_json_logging is False: # pylint: disable=E0213
             # if terminal, set single line output
             handler.setFormatter(
                 logging.Formatter(
