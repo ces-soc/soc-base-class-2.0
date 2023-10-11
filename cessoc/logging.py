@@ -14,7 +14,7 @@ class cessoc_logging:
     logging_setup = False
     logger = None
 
-    def _set_root_logging(self, force_json_logging=False, file_log=False):
+    def _set_root_logging(force_json_logging=False, file_log=False): # pylint: disable=E0213
         """
         Sets up the root logger so it will properly output data.
         """
@@ -24,7 +24,7 @@ class cessoc_logging:
             "debug": logging.DEBUG,
             "warning": logging.WARNING,
         }
-        if "LOGGING_SEVERITY" in os.environ and os.environ["LOGGING_SEVERITY"] in logging_severity_dict:
+        if "LOGGING_SEVERITY" in os.environ and os.environ["LOGGING_SEVERITY"] in logging_severity_dict: # pylint: disable=E0213
             root_logger.setLevel(logging_severity_dict[os.environ["LOGGING_SEVERITY"]])
         else:
             root_logger.setLevel(logging.INFO)
@@ -33,7 +33,7 @@ class cessoc_logging:
             root_logger.handlers = []
         root_logger.addHandler(handler)
         # set log format
-        if "LOGGING_FORMAT" in os.environ and os.environ["LOGGING_FORMAT"].lower() == "ansi":
+        if "LOGGING_FORMAT" in os.environ and os.environ["LOGGING_FORMAT"].lower() == "ansi" and force_json_logging == False: # pylint: disable=E0213
             # if terminal, set single line output
             handler.setFormatter(
                 logging.Formatter(
@@ -49,7 +49,7 @@ class cessoc_logging:
             )
         cessoc_logging.logging_setup = True
 
-    def _get_logging_handler(self, file_log):
+    def _get_logging_handler(file_log): # pylint: disable=E0213
         """Gets the corresponding logging handler based on the type configured for the class. Can be a stdout or file logger"""
         if file_log:
             # Create the rotating file handler. Limit the size to 1000000Bytes ~ 1MB .
@@ -57,7 +57,7 @@ class cessoc_logging:
         # set logging to stdout
         return logging.StreamHandler(sys.stdout)
 
-    def getLogger(self, name, force_json_logging=False, file_log=False):
+    def getLogger(name, force_json_logging=False, file_log=False): # pylint: disable=E0213
         """
         This gets a logger with the name specified. If the root logger has not been configured, it will do so.
         This only configures the root logger the first time it is configured.
@@ -69,7 +69,7 @@ class cessoc_logging:
             return cessoc_logging.logger
         return logging.getLogger(name)
 
-    def setLogger(self, logger_levels: List[Tuple[str, int]]):
+    def setLogger(logger_levels: List[Tuple[str, int]]): # pylint: disable=E0213
         """Allows setting the log level of other loggers. This can be useful if an SDK is noisy."""
         available_loggers = logging.root.manager.loggerDict.keys()
 
