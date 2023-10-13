@@ -59,7 +59,7 @@ def _send_humio(
             backoff_factor=1,
             # These status codes indicate something temporarily wrong, fixable by re-request
             status_forcelist=[408, 429, 500, 502, 503, 504],
-            method_whitelist=["GET", "POST"],
+            allowed_methods=["GET", "POST"],
         )
         session = requests.Session()
         session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
