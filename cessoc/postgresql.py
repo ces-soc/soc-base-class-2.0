@@ -4,12 +4,15 @@ The postgresql provides standard postgresql functionality for cessoc services.
 from typing import Optional
 import psycopg2 as pg  # psycopg2-binary
 from cessoc.aws import ssm
+from cessoc.aws import iam
 
 
 class Postgresql:
-    def __init__(self, database, user, password, host: Optional[str] = None, port: Optional[int] = 5432):
+    def __init__(self, database, user, password: Optional[str] = None, host: Optional[str] = None, port: Optional[int] = 5432, getRDSToken: Optional[bool] = False, region: Optional[str] = "us-west-2"):
         if host is None: # Putting the ssm.get_value in the function def fails unit tests because it tries to pull the data from SSM on import and can't because it can't log in to AWS.
             host = ssm.get_value('/ces/data_store/rds_host')
+        if getRDSToken:
+            password = iam.getRDSToken(DBUsername=user, DBHostname=host, Port=port, Region=region)
         self.connection = pg.connect(
             host=host,
             database=database,
