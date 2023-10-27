@@ -43,8 +43,7 @@ def _createUpdateExpression(values: dict) -> str:
     return_val = "SET "
     for item in values:
         return_val += " " + item + "=:" + item + ","
-        if return_val[-1] == ",":
-            return_val = return_val[:-1] # Trim the last comma off
+    return_val = return_val[:-1] # Trim the last comma off
     return return_val
 
 
