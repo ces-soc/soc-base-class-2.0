@@ -55,8 +55,6 @@ class HealthCheck:
         :param endpoint: The humio ingest endpoint
         :param status: The status of the service. Defaults to "running". Can be "running", "errored", or "completed"
         """
-        if endpoint is None:
-            endpoint = ssm.get_value(f"/{self.campus}/secops-humio/config/api_endpoint") + "ingest/humio-unstructured"
         if token is None:
             token = ssm.get_value(f"/{self.campus}/secops-humio/secrets/healthcheck/ingest_token")
         if status not in ["running", "errored", "completed"]: # check if status is valid
