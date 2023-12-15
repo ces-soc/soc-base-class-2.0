@@ -93,6 +93,7 @@ class Eventhub:
             signal.signal(signal.SIGTERM, self._shutdown_interupt_cb)
 
         self._thread_local = threading.local()
+        self._campus = os.environ.get("CAMPUS")
 
     def _connect(self, username: str, password: str) -> Connection:
         """Configures and starts the connection the the MQ."""
@@ -490,6 +491,87 @@ class Eventhub:
         while not self._closing:
             self._connection = self._connect(username, password)
             self._connection.ioloop.start()
+
+    def publish_message_campus(
+        self,
+        message: Union[Dict, List],
+        routing_key: str,
+        reply_to: bool = False,
+        reply_to_callback: Optional[Callable] = None,
+        reply_to_headers: Optional[Dict] = None,
+        correlation_id: Optional[str] = None,
+        priority: Optional[int] = None,
+        mandatory: bool = True,
+    ) -> str:
+        """
+        Ease of use function to automatically specify the campus name for the exchange
+
+        :param message: JSON message to send
+        :param routing_key: Key used to route the message
+        :param reply_to: Request a reply
+        :param reply_to_callback: The callback to reply to. Must be set when `reply_to` is True
+        :param reply_to_headers: Headers added as part of the message properties that will be sent back if `reply_to` is True
+        :param correlation_id: The message correlation ID to use
+        :param priority: The priority of the message
+        :param mandatory: If the message must be routable to a queue
+
+        :returns: The UUID used for the message ID
+        """
+        return self.publish_message(
+            message,
+            routing_key,
+            exchange=self._campus,
+            reply_to=reply_to,
+            reply_to_callback=reply_to_callback,
+            reply_to_headers=reply_to_headers,
+            correlation_id=correlation_id,
+            priority=priority,
+            mandatory=mandatory,
+        )
+
+    def publish_message(
+        self,
+        message: Union[Dict, List],
+        routing_key: str,
+        exchange: str = "",
+        reply_to: bool = False,
+        reply_to_callback: Optional[Callable] = None,
+        reply_to_headers: Optional[Dict] = None,
+        correlation_id: Optional[str] = None,
+        priority: Optional[int] = None,
+        mandatory: bool = True,
+    ) -> str:
+        """
+        Publishes a message to the MQ using a thread safe callback
+
+        :param message: JSON message to send
+        :param routing_key: Key used to route the message
+        :param exchange: The exchange to publish to
+        :param reply_to: Request a reply
+        :param reply_to_callback: The callback to reply to. Must be set when `reply_to` is True
+        :param reply_to_headers: Headers added as part of the message properties that will be sent back if `reply_to` is True
+        :param correlation_id: The message correlation ID to use
+        :param priority: The priority of the message
+        :param mandatory: If the message must be routable to a queue
+
+        :returns: The UUID used for the message ID
+        """
+        if not correlation_id:
+            correlation_id = uuid.uuid4().hex
+        cb = functools.partial(
+            self._publish_message,
+            message=message,
+            routing_key=routing_key,
+            exchange=exchange,
+            reply_to=reply_to,
+            reply_to_callback=reply_to_callback,
+            reply_to_headers=reply_to_headers,
+            correlation_id=correlation_id,
+            priority=priority,
+            mandatory=mandatory,
+        )
+        self._connection.ioloop.add_callback_threadsafe(cb)
+        return correlation_id
 
     def _publish_message(
         self,
