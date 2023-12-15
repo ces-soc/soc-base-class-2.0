@@ -492,7 +492,7 @@ class Eventhub:
             self._connection = self._connect(username, password)
             self._connection.ioloop.start()
 
-    def publish_message_campus(
+    def publish_message_campus_with_callbacks(
         self,
         message: Union[Dict, List],
         routing_key: str,
@@ -517,7 +517,7 @@ class Eventhub:
 
         :returns: The UUID used for the message ID
         """
-        return self.publish_message(
+        return self.publish_message_with_callbacks(
             message,
             routing_key,
             exchange=self._campus,
@@ -529,7 +529,7 @@ class Eventhub:
             mandatory=mandatory,
         )
 
-    def publish_message(
+    def publish_message_with_callbacks(
         self,
         message: Union[Dict, List],
         routing_key: str,
