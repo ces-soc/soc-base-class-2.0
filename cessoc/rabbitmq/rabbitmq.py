@@ -656,7 +656,7 @@ class Eventhub:
             self._logger.error("Message was unroutable")
 
     def register_on_message_callback_campus(
-        self, queue_name: str, campus_name, bindings: Dict[str, Tuple[Dict, Callable]], max_priority: Optional[int] = None, 
+        self, queue_name: str, bindings: Dict[str, Tuple[Dict, Callable]], max_priority: Optional[int] = None, 
     ) -> None:
         """
         Ease of use function to automatically specify the campus name for the exchange
@@ -666,9 +666,9 @@ class Eventhub:
         :param max_priority: Max priority of the queue. Can be 1-256. https://www.rabbitmq.com/priority.html
         """
         self.register_on_message_callback(
-            f"{queue_name}-{campus_name}",
+            f"{queue_name}-{self._campus}",
             bindings=bindings,
-            exchange=campus_name.lower(),
+            exchange=self._campus.lower(),
             max_priority=max_priority,
         )
 
@@ -722,6 +722,26 @@ class Eventhub:
         )
 
     def register_on_reply_to_callback(self, callback: Callable) -> None:
+        """
+        Ease of use function to automatically specify the campus name in the name of the queue.
+
+        Registers a callback for processing reply to messages.
+
+        :param callback: Function to call when a reply-to message is received
+        """
+        self._logger.debug("Registering on reply_to callback: %s", callback.__qualname__)
+        self._reply_to_callbacks[callback.__qualname__] = callback
+
+        # routing key is the same as the queue name
+        name = f"replyto.{self.connection_name}-{self._campus.lower()}"
+
+        # call the same method for all reply-tos. The _reply_to_callbacks dict determines what other methods to call
+        # delete the queue when all subscribers have closed. We don't want to persist these messages
+        self._queue_manager.register_queue(
+            Queue(name, bindings={name: self._on_reply_to}, consume=True, auto_delete=True)
+        )
+    
+    def register_on_reply_to_callback_campus(self, callback: Callable) -> None:
         """
         Registers a callback for processing reply to messages.
 
