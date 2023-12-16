@@ -492,7 +492,7 @@ class Eventhub:
             self._connection = self._connect(username, password)
             self._connection.ioloop.start()
 
-    def publish_message_campus_with_callbacks(
+    def publish_message_with_callbacks_campus(
         self,
         message: Union[Dict, List],
         routing_key: str,
