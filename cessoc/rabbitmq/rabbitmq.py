@@ -94,6 +94,7 @@ class Eventhub:
 
         self._thread_local = threading.local()
         self._campus = os.environ.get("CAMPUS")
+        self._reply_queue_name = None
 
     def _connect(self, username: str, password: str) -> Connection:
         """Configures and starts the connection the the MQ."""
