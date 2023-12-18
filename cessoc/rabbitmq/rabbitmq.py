@@ -610,7 +610,7 @@ class Eventhub:
 
         reply_to_queue = None
         if reply_to and len(self._reply_to_callbacks) > 0:
-            reply_to_queue = f"replyto.{self.connection_name}"
+            reply_to_queue = self._reply_queue_name # Set Queue Name from memory. We aren't sure they registered with the _campus or the normal function without this.
         elif reply_to and len(self._reply_to_callbacks) == 0:
             raise AttributeError(
                 "Cannot set reply to when there are no reply_to callbacks registered. If you would"
@@ -733,7 +733,12 @@ class Eventhub:
         self._reply_to_callbacks[callback.__qualname__] = callback
 
         # routing key is the same as the queue name
-        name = f"replyto.{self.connection_name}-{self._campus.lower()}"
+        name = f"replyto.{self.connection_name}"
+        if self._reply_queue_name is None:
+            self._reply_queue_name = name
+        else:
+            if name != self._reply_queue_name:
+                raise Exception("You cannot use both register_on_reply_to_callback and register_on_reply_to_callback_campus in the same EDM. Please use one other other")
 
         # call the same method for all reply-tos. The _reply_to_callbacks dict determines what other methods to call
         # delete the queue when all subscribers have closed. We don't want to persist these messages
@@ -751,7 +756,12 @@ class Eventhub:
         self._reply_to_callbacks[callback.__qualname__] = callback
 
         # routing key is the same as the queue name
-        name = f"replyto.{self.connection_name}"
+        name = f"replyto.{self.connection_name}-{self._campus.lower()}"
+        if self._reply_queue_name is None:
+            self._reply_queue_name = name
+        else:
+            if name != self._reply_queue_name:
+                raise Exception("You cannot use both register_on_reply_to_callback and register_on_reply_to_callback_campus in the same EDM. Please use one other other")
 
         # call the same method for all reply-tos. The _reply_to_callbacks dict determines what other methods to call
         # delete the queue when all subscribers have closed. We don't want to persist these messages
