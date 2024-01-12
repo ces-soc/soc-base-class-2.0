@@ -18,6 +18,7 @@ def _send_humio(
     chunked_data: List,
     endpoint: str = None,
     token: str = None,
+    session: Optional[requests.sessions.Session] = None
 ):
     r"""
     Initialize Elastic Client for connection to Humio
@@ -34,6 +35,7 @@ def _send_humio(
     :param chunked_data: A list of chunks of event data, formatted according to Humio Ingest API unstructured ingest
     :param endpoint: On-prem or remote endpoint for humio data exports
     :param token: Humio-generated token for data ingress
+    :param session: Session variable to pass in to use to connection pooling
 
     :raises KeyError: if CAMPUS variable is not set
     :raises Exception: if the configuration is missing for humio connections
@@ -54,15 +56,8 @@ def _send_humio(
                 endpoint = ssm.get_value("/" + campus + "/secops-humio/config/ingest_api")
 
         # Create a HTTP session
-        retry_strategy = Retry(
-            total=3,
-            backoff_factor=1,
-            # These status codes indicate something temporarily wrong, fixable by re-request
-            status_forcelist=[408, 429, 500, 502, 503, 504],
-            allowed_methods=["GET", "POST"],
-        )
-        session = requests.Session()
-        session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
+        if session is None:
+            session = create_session()
 
         # Make the ingest POSTs in chunks
         for data in chunked_data:
@@ -88,6 +83,7 @@ def write(
     path: Optional[str] = None,
     endpoint: Optional[str] = None,
     chunk_size: Optional[int] = 200,
+    session: Optional[requests.sessions.Session] = None
 ) -> None:
     """
     Write intel data to given Humio. Events must be pre-processed (e.g. @timestamp must
@@ -99,7 +95,7 @@ def write(
     :param token: Humio-generated ingest token
     :param metadata: Optional list of dictionaries for any other information that may be valuable/necessary
     :param chunk_size: Number of events to send per POST request to Humio
-    
+    :param session: Session variable to pass in to use to connection pooling
     :raises Exception: general exception for raised exceptions from humio functions
     """
     if not isinstance(data, list):
@@ -121,4 +117,19 @@ def write(
         for event in data[i: i + chunk_size]:  # noqa:
             chunk.append(json.dumps(event))
         chunks.append([{"messages": chunk}])
-    _send_humio(chunks, endpoint, token)
+    _send_humio(chunks, endpoint, token, session)
+
+def create_session() -> requests.sessions.Session:
+    """
+    Creates a session for requests to use.
+    """
+    retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            # These status codes indicate something temporarily wrong, fixable by re-request
+            status_forcelist=[408, 429, 500, 502, 503, 504],
+            allowed_methods=["GET", "POST"],
+    )
+    session = requests.Session()
+    session.mount("https://", HTTPAdapter(max_retries=retry_strategy))
+    return session
