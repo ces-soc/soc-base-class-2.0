@@ -10,6 +10,7 @@ from typing import Optional, Union
 import tzlocal
 from cessoc import humio
 from cessoc.aws import ssm
+import requests
 
 from cessoc.logging import cessoc_logging
 
@@ -47,7 +48,7 @@ class HealthCheck:
         else:
             self.send(status="errored", custom_data={"error": error})
 
-    def send(self, custom_data: Union[str, dict] = "None", endpoint: Optional[str] = None, token: Optional[str] = None, status="running"):
+    def send(self, custom_data: Union[str, dict] = "None", endpoint: Optional[str] = None, token: Optional[str] = None, status="running", session: Optional[requests.sessions.Session] = None):
         """
         Sends the healthcheck data to humio. This will run automatically when the program exits. This can be called on a long running service to send periodic healthcheck data.
         :param custom_data: The custom data to be sent to humio. Must be a json object
@@ -81,4 +82,4 @@ class HealthCheck:
             healthdata[0]['env'] = os.getenv("STAGE")
 
         self._logger.info("sending healthcheck data to humio")
-        humio.write(data=healthdata, endpoint=endpoint, token=token, path="healthcheck")
+        humio.write(data=healthdata, endpoint=endpoint, token=token, path="healthcheck", session=session)
