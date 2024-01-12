@@ -21,6 +21,23 @@ from cessoc.rabbitmq.exchange import Exchange, ExchangeType
 from cessoc.aws import ssm
 from cessoc.logging import cessoc_logging
 
+
+# https://stackoverflow.com/questions/3464061/cast-base-class-to-derived-class-python-or-more-pythonic-way-of-extending-class
+class extendProperties(BasicProperties):
+    def __init__(self):
+        super().__init__()
+        self.exchange = None
+        self.routing_key = None
+    
+    @classmethod
+    def from_BasicProperties(cls, oldprop: BasicProperties, delivery_prop: Basic.Deliver):
+        newProperty = cls()
+        for key, value in oldprop.__dict__.items():
+            newProperty.__dict__[key] = value
+        newProperty.exchange = delivery_prop.exchange
+        newProperty.routing_key = delivery_prop.routing_key
+        return newProperty
+
 # FROM EDM SECTION
 
 
@@ -410,7 +427,8 @@ class Eventhub:
             # measure execution time of the event
             start_time = time.process_time()
 
-            response = cb(properties, json.loads(body.decode("utf-8"), strict=False))
+            newProperties = extendProperties.from_BasicProperties(oldprop=properties, delivery_prop=basic_deliver)
+            response = cb(newProperties, json.loads(body.decode("utf-8"), strict=False))
 
             end_time = time.process_time()
             self._logger.debug("Processing event took %s seconds", (end_time - start_time))
