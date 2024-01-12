@@ -21,6 +21,7 @@ from cessoc.rabbitmq.exchange import Exchange, ExchangeType
 from cessoc.aws import ssm
 from cessoc.logging import cessoc_logging
 
+
 # https://stackoverflow.com/questions/3464061/cast-base-class-to-derived-class-python-or-more-pythonic-way-of-extending-class
 class extendProperties(BasicProperties):
     def __init__(self):
@@ -38,6 +39,7 @@ class extendProperties(BasicProperties):
         return newProperty
 
 # FROM EDM SECTION
+
 
 class Eventhub:
     """Eventhub Base Class abstracts Pika connections/actions"""
