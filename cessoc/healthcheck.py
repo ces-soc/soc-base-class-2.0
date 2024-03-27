@@ -19,7 +19,7 @@ class HealthCheck:
     """
     Sends information to humio with pre-defined fields in addition to a custom field.
     """
-    def __init__(self, service_name: str):
+    def __init__(self, service_name: str, endpoint: Optional[str] = None, token: Optional[str] = None):
         """
         Initializes the healthcheck object.
 
@@ -30,6 +30,8 @@ class HealthCheck:
         self.service_name = service_name
         self.campus = os.environ["CAMPUS"].lower()
         self.timezone = tzlocal.get_localzone()
+        self.endpoint = endpoint
+        self.token = token
         atexit.register(self._end)
 
         self._logger = cessoc_logging.getLogger(f"{__name__}.{self.__class__.__name__}")
@@ -44,9 +46,9 @@ class HealthCheck:
         except AttributeError:
             error = None
         if error is None:
-            self.send(status="completed")
+            self.send(status="completed", endpoint=self.endpoint, token=self.token)
         else:
-            self.send(status="errored", custom_data={"error": error})
+            self.send(status="errored", custom_data={"error": error}, endpoint=self.endpoint, token=self.token)
 
     def send(self, custom_data: Union[str, dict] = "None", endpoint: Optional[str] = None, token: Optional[str] = None, status="running", session: Optional[requests.sessions.Session] = None):
         """
