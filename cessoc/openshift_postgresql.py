@@ -1,15 +1,12 @@
 """
-The postgresql provides standard postgresql functionality for cessoc services.
+The postgresql provides standard postgresql functionality for cessoc services on openshift.
 """
-from typing import Optional
+
 import psycopg2 as pg  # psycopg2-binary
-import os
 
 
 class OpenshiftPostgresql:
-    def __init__(self, database, user, password: Optional[str] = None, host: Optional[str] = None, port: Optional[int] = 5432, region: Optional[str] = "us-west-2"):
-        if host is None:
-            host = os.environ['/ces/data_store/rds_host']
+    def __init__(self, database, user, password, host, port):
         self.connection = pg.connect(
             host=host,
             database=database,
