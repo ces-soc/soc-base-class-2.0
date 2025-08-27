@@ -8,7 +8,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional, Union
 import tzlocal
-from cessoc import humio
+from cessoc import openshift_humio
 import requests
 
 from cessoc.logging import cessoc_logging
@@ -83,4 +83,4 @@ class OpenshiftHealthCheck:
             healthdata[0]['env'] = os.getenv("STAGE")
 
         self._logger.info("sending healthcheck data to humio")
-        humio.write(data=healthdata, endpoint=endpoint, token=token, path="healthcheck", session=session)
+        openshift_humio.write(data=healthdata, endpoint=endpoint, token=token, path="healthcheck", session=session)
